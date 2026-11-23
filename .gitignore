@@ -1,0 +1,52 @@
+# Python bytecode and isolated environments
+__pycache__/
+**/__pycache__/
+*.pyc
+*.py[cod]
+.venv/
+venv/
+ml/.venv/
+ml/.venv-wsl/
+ml/venv/
+
+# Local participant data, annotations, validation outputs, and transformed data
+*.jsonl
+ml/data/
+ml/data/raw/
+ml/data/processed/
+ml/reports/
+ml/processed/
+ml/temp/
+ml/tmp/
+ml/runs/
+ml/logs/
+ml/tensorboard/
+
+# Training and export artifacts
+ml/artifacts/
+ml/exports/
+ml/checkpoints/
+ml/weights/
+ml/**/*.keras
+ml/**/*.h5
+ml/**/*.npz
+ml/**/*.npy
+ml/**/*.ckpt
+ml/**/*.ckpt.*
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+*.env
+*credentials*
+*credential*
+*secrets*
+*secret*
+*.pem
+*.key
+
+# Python test and coverage caches
+.pytest_cache/
+.coverage
+htmlcov/

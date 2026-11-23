@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vidasegura.local/ml/dataset.schema.v1.json",
+  "title": "VidaSegura IA pose sample",
+  "description": "One camera-captured MoveNet SINGLEPOSE_LIGHTNING sample; schema version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "sample_id", "subject_id", "session_id", "timestamp_ms",
+    "image_width", "image_height", "data_origin", "capture_method",
+    "posture_label", "viewpoint_label", "keypoints"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "sample_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"},
+    "subject_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$", "description": "Anonymous participant identifier; never a name or contact detail."},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$"},
+    "timestamp_ms": {"type": "integer", "minimum": 1},
+    "image_width": {"type": "integer", "minimum": 1},
+    "image_height": {"type": "integer", "minimum": 1},
+    "data_origin": {"const": "camera"},
+    "capture_method": {"const": "movenet_singlepose_lightning"},
+    "posture_label": {"enum": ["standing", "sitting", "lying", "other"]},
+    "viewpoint_label": {"enum": ["front", "left_profile", "right_profile", "oblique"]},
+    "challenge_label": {"enum": ["unspecified", "standard", "side_lying", "squat", "kneeling", "leaning", "other"], "description": "Optional manual tag for targeted stress conditions; it does not replace posture_label."},
+    "geometric_prediction": {"type": ["string", "null"], "enum": ["standing", "sitting", "lying", "inconclusive", null]},
+    "keypoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left_shoulder", "right_shoulder", "left_hip", "right_hip",
+        "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+        "left_knee", "right_knee", "left_ankle", "right_ankle"
+      ],
+      "properties": {
+        "left_shoulder": {"$ref": "#/$defs/keypoint"},
+        "right_shoulder": {"$ref": "#/$defs/keypoint"},
+        "left_hip": {"$ref": "#/$defs/keypoint"},
+        "right_hip": {"$ref": "#/$defs/keypoint"},
+        "left_elbow": {"$ref": "#/$defs/keypoint"},
+        "right_elbow": {"$ref": "#/$defs/keypoint"},
+        "left_wrist": {"$ref": "#/$defs/keypoint"},
+        "right_wrist": {"$ref": "#/$defs/keypoint"},
+        "left_knee": {"$ref": "#/$defs/keypoint"},
+        "right_knee": {"$ref": "#/$defs/keypoint"},
+        "left_ankle": {"$ref": "#/$defs/keypoint"},
+        "right_ankle": {"$ref": "#/$defs/keypoint"}
+      }
+    }
+  },
+  "$defs": {
+    "keypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "score", "validity"],
+      "properties": {
+        "x": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Normalized original MoveNet x coordinate; null when the point is missing."},
+        "y": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Normalized original MoveNet y coordinate; null when the point is missing."},
+        "score": {"type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Original MoveNet confidence. It may be preserved for a missing point when the model returned a finite score."},
+        "validity": {"enum": ["observed", "low_confidence", "missing"]}
+      }
+    }
+  }
+}

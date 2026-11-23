@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f7f8">
+    <title>VidaSegura IA | Laboratório de coleta</title>
+    <style>
+        :root { font-family: system-ui, Segoe UI, sans-serif; color: #192331; background: #f5f7fa; }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        main { max-width: 1120px; margin: auto; padding: 24px; }
+        h1, h2 { margin: 0 0 12px; }
+        p { line-height: 1.5; }
+        .panel { margin: 16px 0; padding: 20px; border: 1px solid #dce3eb; border-radius: 12px; background: white; }
+        .notice { border-left: 4px solid #3275b9; background: #edf5ff; }
+        .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+        label { display: grid; gap: 6px; font-weight: 600; }
+        input, select, button { min-height: 42px; padding: 8px 10px; border: 1px solid #aeb9c7; border-radius: 7px; font: inherit; }
+        input[type="checkbox"] { min-height: auto; width: 18px; height: 18px; }
+        button { cursor: pointer; background: #fff; }
+        button.primary { background: #1768ac; color: white; border-color: #1768ac; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .consent { display: flex; align-items: center; gap: 10px; margin: 18px 0 4px; }
+        .camera-grid { display: grid; grid-template-columns: minmax(280px, 2fr) minmax(230px, 1fr); gap: 18px; }
+        .preview { width: 100%; min-height: 220px; max-height: 560px; aspect-ratio: 4 / 3; background: #111820; border-radius: 8px; object-fit: contain; }
+        .preview.mirrored { transform: scaleX(-1); }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .status { min-height: 24px; font-weight: 600; }
+        .stats { padding: 12px; border-radius: 8px; background: #f1f5f9; }
+        .samples { width: 100%; border-collapse: collapse; }
+        .samples th, .samples td { padding: 10px 8px; border-bottom: 1px solid #e1e7ee; text-align: left; }
+        .samples th { font-size: .85rem; }
+        .samples td { font-size: .92rem; }
+        .muted { color: #5b6775; }
+        @media (max-width: 700px) { main { padding: 14px; } .camera-grid { grid-template-columns: 1fr; } .panel { padding: 15px; overflow-x: auto; } }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <p class="muted">VIDASEGURA IA / LABORATÓRIO LOCAL</p>
+        <h1>Coleta de articulações</h1>
+        <p>Ferramenta separada do monitoramento principal. As anotações são manuais e ficam somente nesta página até o download JSONL.</p>
+    </header>
+
+    <section class="panel notice" aria-label="Privacidade e consentimento">
+        <strong>Privacidade</strong>
+        <p>Esta página não grava nem envia vídeos, imagens ou keypoints a serviços externos. O vídeo é usado ao vivo para inferência; somente os dados estruturados das amostras capturadas são mantidos temporariamente na memória desta aba. Use identificadores anônimos e colete apenas com consentimento.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="annotation-heading">
+        <h2 id="annotation-heading">Identificação e anotação</h2>
+        <div class="fields">
+            <label for="subjectId">Participante anônimo
+                <input id="subjectId" autocomplete="off" maxlength="64" placeholder="P001" pattern="[A-Za-z0-9_-]{1,64}" required>
+            </label>
+            <label for="sessionId">Sessão
+                <input id="sessionId" autocomplete="off" maxlength="64" placeholder="S001" pattern="[A-Za-z0-9_-]{1,64}" required>
+            </label>
+            <label for="postureLabel">Postura observada
+                <select id="postureLabel" required>
+                    <option value="standing">standing — em pé</option>
+                    <option value="sitting">sitting — sentada</option>
+                    <option value="lying">lying — deitada</option>
+                    <option value="other">other — agachada, ajoelhada, inclinada ou ambígua</option>
+                </select>
+            </label>
+            <label for="viewpointLabel">Perspectiva observada
+                <select id="viewpointLabel" required>
+                    <option value="front">front — frontal</option>
+                    <option value="left_profile">left_profile — perfil esquerdo</option>
+                    <option value="right_profile">right_profile — perfil direito</option>
+                    <option value="oblique">oblique — oblíqua</option>
+                </select>
+            </label>
+            <label for="challengeLabel">Situação específica (opcional)
+                <select id="challengeLabel">
+                    <option value="unspecified">Não especificada</option>
+                    <option value="standard">Postura comum / sem desafio marcado</option>
+                    <option value="side_lying">Deitada de lado</option>
+                    <option value="squat">Agachamento</option>
+                    <option value="kneeling">Ajoelhamento</option>
+                    <option value="leaning">Inclinação do tronco</option>
+                    <option value="other">Outra condição de teste</option>
+                </select>
+            </label>
+            <label for="cameraFacing">Câmera do dispositivo
+                <select id="cameraFacing">
+                    <option value="user">Frontal</option>
+                    <option value="environment">Traseira</option>
+                </select>
+            </label>
+        </div>
+        <label class="consent" for="consent">
+            <input id="consent" type="checkbox">
+            Confirmo que o participante consentiu com esta coleta local.
+        </label>
+    </section>
+
+    <section class="panel" aria-labelledby="camera-heading">
+        <h2 id="camera-heading">Câmera e amostra atual</h2>
+        <div class="camera-grid">
+            <div>
+                <video id="preview" class="preview mirrored" autoplay muted playsinline aria-label="Pré-visualização ao vivo; nenhum vídeo é salvo"></video>
+                <div class="controls">
+                    <button id="startCamera" class="primary" type="button">Iniciar câmera</button>
+                    <button id="stopCamera" type="button" disabled>Parar câmera</button>
+                    <button id="captureSample" type="button" disabled>Capturar amostra</button>
+                </div>
+            </div>
+            <div>
+                <p id="status" class="status" role="status" aria-live="polite">Câmera desligada.</p>
+                <p id="sampleQuality" class="stats">Aguardando inferência.</p>
+                <p class="muted">O espelhamento é somente visual. O JSONL usa coordenadas e nomes originais do MoveNet.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel" aria-labelledby="collected-heading">
+        <h2 id="collected-heading">Amostras nesta sessão da página</h2>
+        <p id="sampleCount" class="muted">0 amostras. Nada é persistido ao fechar ou recarregar a página.</p>
+        <div class="controls">
+            <button id="downloadJsonl" class="primary" type="button" disabled>Baixar JSONL</button>
+            <button id="clearSamples" type="button" disabled>Descartar todas</button>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="samples">
+                <thead><tr><th>ID</th><th>Postura</th><th>Perspectiva</th><th>Situação</th><th>Articulações observadas</th><th>Ação</th></tr></thead>
+                <tbody id="sampleRows"><tr><td colspan="6" class="muted">Nenhuma amostra capturada.</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script type="module" src="./pose-capture.js"></script>
+</body>
+</html>

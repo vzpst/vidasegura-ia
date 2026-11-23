@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f7f7f8">
+    <title>VidaSegura IA | Visão geral</title>
+    <script>
+        // Aplica a preferência salva antes de carregar o CSS para evitar um flash no tema claro.
+        try {
+            if (localStorage.getItem("vidaSeguraTheme") === "dark") {
+                document.documentElement.dataset.theme = "dark";
+                document.querySelector('meta[name="theme-color"]').setAttribute("content", "#171a21");
+            }
+        } catch (error) {
+            // Se o armazenamento estiver bloqueado, a página permanece no tema claro padrão.
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <symbol id="icon-overview" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+        <symbol id="icon-camera" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></symbol>
+        <symbol id="icon-sensors" viewBox="0 0 24 24"><path d="M3 12h3l3-8 5 16 3-8h4"/></symbol>
+        <symbol id="icon-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/></symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1 1.2 1-.1 1.5-1.7 2.9-1.4.5-1.4-.7a8 8 0 0 1-2 .8l-.5 1.5H10l-.5-1.5a8 8 0 0 1-2-.8l-1.4.7-1.4-.5L3 17.6l-.1-1.5 1.2-1 .1-.1a8 8 0 0 1 0-2l-.1-.1-1.2-1L3 10.4l1.7-2.9 1.4-.5 1.4.7a8 8 0 0 1 2-.8L10 5.4h3l.5 1.5a8 8 0 0 1 2 .8l1.4-.7 1.4.5 1.7 2.9-.1 1.5-1.2 1-.1.1a8 8 0 0 1 0 2Z"/></symbol>
+        <symbol id="icon-brain" viewBox="0 0 24 24"><path d="M12 5a3 3 0 0 0-5.8-1A3.5 3.5 0 0 0 4 10a3.5 3.5 0 0 0 1 6.7A3 3 0 0 0 11 18V6m1-1a3 3 0 0 1 5.8-1A3.5 3.5 0 0 1 20 10a3.5 3.5 0 0 1-1 6.7A3 3 0 0 1 13 18V6"/></symbol>
+        <symbol id="icon-person" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2M9 14l3 3 3-3"/></symbol>
+        <symbol id="icon-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></symbol>
+        <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></symbol>
+        <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></symbol>
+    </svg>
+
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Navegação principal">
+            <a class="brand" href="#overview" aria-label="VidaSegura IA, visão geral">
+                <span class="brand-mark">VS</span>
+                <span class="brand-copy"><strong>VidaSegura <b>IA</b></strong><small>Monitoramento inteligente</small></span>
+            </a>
+
+            <p class="nav-caption">MENU PRINCIPAL</p>
+            <nav class="side-nav">
+                <a class="nav-link is-active" href="#overview" aria-label="Visão geral" aria-current="page"><svg><use href="#icon-overview"/></svg><span>Visão geral</span></a>
+                <a class="nav-link" href="#monitoring" aria-label="Monitoramento"><svg><use href="#icon-camera"/></svg><span>Monitoramento</span></a>
+                <a class="nav-link" href="#sensors" aria-label="Sensores"><svg><use href="#icon-sensors"/></svg><span>Sensores</span></a>
+                <a class="nav-link" href="#history" aria-label="Histórico de posições"><svg><use href="#icon-history"/></svg><span>Histórico de posições</span></a>
+                <a class="nav-link" href="#settings" aria-label="Configurações, em desenvolvimento"><svg><use href="#icon-settings"/></svg><span>Configurações</span><small>Em desenvolvimento</small></a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="footer-mark">VS</span>
+                <span>VidaSegura IA<br><small>Protótipo acadêmico</small></span>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">VIDASEGURA IA <span>/</span> MONITORAMENTO</p>
+                    <h1 id="pageTitle">Visão geral</h1>
+                    <p id="pageSubtitle">Acompanhe o monitoramento e o estado do sistema em tempo real.</p>
+                </div>
+                <div class="topbar-actions">
+                    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Ativar tema escuro" aria-pressed="false" title="Ativar tema escuro">
+                        <svg aria-hidden="true"><use id="themeIconUse" href="#icon-sun"/></svg>
+                    </button>
+                    <div class="system-indicator" aria-live="polite">
+                        <span class="status-dot" id="systemDot"></span>
+                        <span><small>ESTADO DO SISTEMA</small><strong id="systemStatus">Sistema aguardando inicialização</strong></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <section class="section-block" id="overview" aria-labelledby="overviewHeading">
+                    <div class="section-heading">
+                        <div><p class="eyebrow">RESUMO DO SISTEMA</p><h2 id="overviewHeading">Visão geral</h2></div>
+                        <span class="session-label"><span class="status-dot muted"></span> Sessão atual</span>
+                    </div>
+
+                    <div class="metric-grid">
+                        <article class="metric-card">
+                            <div class="metric-top"><span class="metric-icon blue"><svg><use href="#icon-camera"/></svg></span><span class="metric-kicker">CAPTURA DE VÍDEO</span></div>
+                            <p>Câmera</p><h3 id="cameraStatus">Desativada</h3>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-top"><span class="metric-icon violet"><svg><use href="#icon-brain"/></svg></span><span class="metric-kicker">MOVENET</span></div>
+                            <p>Inteligência artificial</p><h3 id="aiStatus">Não inicializada</h3>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-top"><span class="metric-icon green"><svg><use href="#icon-person"/></svg></span><span class="metric-kicker">CLASSIFICAÇÃO</span></div>
+                            <p>Postura atual</p><h3 id="poseStatus">IA corporal aguardando ativação.</h3>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-top"><span class="metric-icon amber"><svg><use href="#icon-activity"/></svg></span><span class="metric-kicker">DISPOSITIVO</span></div>
+                            <p>Sensores</p><h3 id="sensorStatus">Aguardando ativação</h3>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="section-block" id="monitoring" aria-labelledby="monitoringHeading">
+                    <div class="section-heading">
+                        <div><p class="eyebrow">ANÁLISE VISUAL</p><h2 id="monitoringHeading">Monitoramento ao vivo</h2><p class="section-description">Acompanhamento visual e análise inteligente de postura.</p></div>
+                    </div>
+                    <div class="monitor-grid">
+                        <article class="surface-card camera-card">
+                            <div class="card-heading"><div><h3>Visualização da câmera</h3><p>Imagem e pontos corporais detectados</p></div><span id="cameraLiveBadge" class="live-label" data-state="waiting"><i></i><span>DESLIGADA</span></span></div>
+                            <div class="video-container">
+                                <video id="camera" autoplay playsinline muted></video>
+                                <canvas id="poseCanvas"></canvas>
+                                <div id="placeholder"><span class="placeholder-icon"><svg><use href="#icon-camera"/></svg></span><strong>Câmera desativada</strong><small>Ative a câmera para iniciar a análise visual.</small></div>
+                            </div>
+                            <div class="camera-controls">
+                                <button id="startCamera" class="button button-primary"><span aria-hidden="true">▶</span> Iniciar câmera</button>
+                                <button id="stopCamera" class="button button-secondary" disabled><span aria-hidden="true">■</span> Parar câmera</button>
+                                <button id="flipCamera" class="button button-quiet" disabled><span aria-hidden="true">⇄</span> Trocar câmera</button>
+                            </div>
+                        </article>
+
+                        <aside class="surface-card analysis-card" id="analysisCard" data-state="waiting" aria-labelledby="analysisHeading">
+                            <div class="card-heading analysis-heading">
+                                <span class="analysis-symbol"><svg><use href="#icon-brain"/></svg></span>
+                                <div class="analysis-heading-copy"><h3 id="analysisHeading">Análise inteligente</h3><p>Leitura corporal em tempo real pelo MoveNet</p></div>
+                                <span class="analysis-badge" data-state="waiting"><i></i><span id="analysisBadge">Câmera desligada</span></span>
+                            </div>
+                            <div class="posture-highlight" data-state="waiting">
+                                <div class="posture-label"><span class="posture-person-icon"><svg><use href="#icon-person"/></svg></span><small>POSTURA IDENTIFICADA</small></div>
+                                <strong id="postureValue" data-state="waiting" aria-live="polite">Aguardando câmera</strong>
+                                <p>Resultado da classificação corporal</p>
+                            </div>
+                            <div class="analysis-stats">
+                                <div class="analysis-stat">
+                                    <span class="analysis-stat-icon person"><svg><use href="#icon-person"/></svg></span>
+                                    <div><small>PESSOA DETECTADA</small><strong id="personState" data-state="waiting">Aguardando câmera</strong></div>
+                                </div>
+                                <div class="analysis-stat">
+                                    <span class="analysis-stat-icon model"><svg><use href="#icon-brain"/></svg></span>
+                                    <div><small>ESTADO DA ANÁLISE</small><strong id="analysisState" data-state="waiting">Câmera desligada</strong></div>
+                                </div>
+                                <div class="analysis-stat">
+                                    <span class="analysis-stat-icon person"><svg><use href="#icon-person"/></svg></span>
+                                    <div><small>VISIBILIDADE CORPORAL</small><strong id="visibilityState" data-state="waiting" aria-live="polite">Aguardando inferência</strong></div>
+                                </div>
+                                <div class="analysis-stat">
+                                    <span class="analysis-stat-icon model"><svg><use href="#icon-shield"/></svg></span>
+                                    <div><small>RISCO DE QUEDA</small><strong id="fallRiskState" data-state="waiting" aria-live="polite">NÃO AVALIADO</strong></div>
+                                </div>
+                            </div>
+                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Classificação experimental baseada nos pontos corporais visíveis.</p>
+                        </aside>
+                    </div>
+                </section>
+
+                <section class="section-block" id="sensors" aria-labelledby="sensorsHeading">
+                    <div class="section-heading">
+                        <div><p class="eyebrow">DADOS DO DISPOSITIVO</p><h2 id="sensorsHeading">Monitoramento dos sensores</h2><p class="section-description">Informações recebidas dos sensores de movimento.</p></div>
+                        <div class="sensor-controls"><button id="startSensors" class="button button-primary">Ativar sensores</button><button id="stopSensors" class="button button-secondary" disabled>Parar sensores</button></div>
+                    </div>
+                    <div class="sensor-grid">
+                        <article class="sensor-card"><span>Aceleração X</span><strong id="accX">0.00</strong><small>m/s²</small></article>
+                        <article class="sensor-card"><span>Aceleração Y</span><strong id="accY">0.00</strong><small>m/s²</small></article>
+                        <article class="sensor-card"><span>Aceleração Z</span><strong id="accZ">0.00</strong><small>m/s²</small></article>
+                        <article class="sensor-card"><span>Variação</span><strong id="motionDelta">0.00</strong><small>m/s²</small></article>
+                    </div>
+                    <div class="sensor-footnote"><p id="sensorHelp">Aguardando ativação dos sensores.</p><p class="risk-indicator">Estado de movimento: <strong id="riskStatus">Sem análise</strong></p></div>
+                </section>
+
+                <section class="section-block" id="history" aria-labelledby="historyHeading">
+                    <div class="section-heading"><div><p class="eyebrow">MUDANÇAS ESTABILIZADAS</p><h2 id="historyHeading">Histórico de posições</h2><p class="section-description">Somente mudanças confirmadas entre posturas corporais.</p></div></div>
+                    <div class="surface-card position-history-card"><ol id="positionHistory" class="position-timeline" aria-live="polite"><li class="empty-state">Nenhuma posição registrada nesta sessão.</li></ol></div>
+                    <div class="section-heading history-heading"><div><p class="eyebrow">ATIVIDADE RECENTE</p><h3>Histórico de eventos</h3><p class="section-description">Registros desta sessão de monitoramento.</p></div><button id="clearLog" class="button button-quiet">Limpar eventos</button></div>
+                    <div class="surface-card event-card"><div id="eventLog" aria-live="polite"><p class="empty-state">Nenhum evento registrado nesta sessão.</p></div></div>
+                </section>
+
+                <section class="section-block" id="settings" aria-labelledby="settingsHeading">
+                    <div class="section-heading"><div><p class="eyebrow">PREFERÊNCIAS</p><h2 id="settingsHeading">Configurações</h2><p class="section-description">Controles de configuração serão disponibilizados em uma etapa futura.</p></div></div>
+                    <div class="surface-card development-card"><span class="development-icon"><svg><use href="#icon-settings"/></svg></span><div><h3>Em desenvolvimento</h3><p>Esta área ainda não salva preferências de monitoramento.</p></div></div>
+                </section>
+
+                <footer class="page-footer">VidaSegura IA é um protótipo acadêmico experimental e não substitui sistemas profissionais de monitoramento ou atendimento de emergência.</footer>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
