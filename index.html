@@ -145,10 +145,14 @@
                                 </div>
                                 <div class="analysis-stat">
                                     <span class="analysis-stat-icon model"><svg><use href="#icon-shield"/></svg></span>
-                                    <div><small>RISCO DE QUEDA</small><strong id="fallRiskState" data-state="waiting" aria-live="polite">NÃO AVALIADO</strong></div>
+                                    <div><small>POSSÍVEL QUEDA · GRAVIDADE</small><strong id="fallRiskState" data-state="waiting" aria-live="polite">NÃO AVALIADO</strong></div>
                                 </div>
                             </div>
-                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Classificação experimental baseada nos pontos corporais visíveis.</p>
+                            <div id="fallAlert" class="fall-alert" data-level="0" role="alert" hidden>
+                                <div><strong id="fallAlertTitle">Possível queda</strong><p id="fallAlertText">Verifique a pessoa.</p></div>
+                                <button id="fallAcknowledge" class="button button-primary" type="button">Estou bem</button>
+                            </div>
+                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios.</p>
                         </aside>
                     </div>
                 </section>

@@ -162,3 +162,28 @@ node --test tests/*.test.mjs
 Os dados são insuficientes quando o relatório mostra amostras rejeitadas, classes ou perspectivas sem cobertura, poucos participantes/sessões/grupos, menos de 20 exemplos por classe, alguma classe em menos de três grupos, ou quando a divisão agrupada não consegue manter as quatro classes no teste. Colete mais participantes e sessões independentes; não contorne os gates repetindo frames ou usando dados simulados. Um holdout que não contém uma perspectiva ou condição desafiadora não permite concluir desempenho para ela.
 
 Até agora nenhum modelo foi treinado ou exportado: isso só deve ocorrer depois da coleta, validação e revisão de dados reais rotulados. A etapa termina neste laboratório isolado; a integração na aplicação fica para uma etapa futura, após validação.
+
+## Random Forest com corpo parcialmente visível (apresentação)
+
+`scripts/train_forest.py` treina e compara três abordagens com validação cruzada agrupada por participante/sessão (`StratifiedGroupKFold`):
+
+- regra geométrica atual (`geometric_prediction` salva pelo coletor);
+- regressão logística (baseline);
+- Random Forest (`class_weight="balanced"`).
+
+Para lidar com oclusão, o **treino** de cada fold recebe cópias com articulações escondidas (`scripts/occlusion.py`: um lado do corpo, pernas, braços, 25% e 50% aleatórios, baixa confiança). O **teste** é medido sem oclusão e em cada cenário. Abaixo de um limiar de probabilidade a resposta passa a ser "inconclusivo"; o relatório mostra a cobertura e o acerto para cada limiar.
+
+```powershell
+.\ml\.venv\Scripts\Activate.ps1
+python ml\scripts\train_forest.py ml\data\raw\*.jsonl
+```
+
+Saída em `ml/artifacts/forest_<data>/` (ignorado pelo Git): `relatorio.md`, `relatorio.json` e `random_forest.joblib`. O treino é recusado se a diversidade mínima não for atingida.
+
+Ensaio do pipeline sem dados reais (bonecos sintéticos; **as métricas não têm valor e não devem ir para os slides**):
+
+```powershell
+python ml\scripts\train_forest.py --demo-sintetico
+```
+
+Para medir o efeito da oclusão simulada, rode também com `--sem-oclusao-no-treino` e compare os cenários `lado_*_oculto` e `aleatorio_50`.

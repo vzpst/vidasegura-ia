@@ -15,6 +15,9 @@ export const FALL_DETECTION_CONFIG = Object.freeze({
     maxInferenceIntervalMs: 1000,
     minimumObservedJoints: 6,
     minimumObservedTorsoJoints: 3,
+    // Perfil: ombro + quadril do mesmo lado bastam quando o centro corporal
+    // foi calculado a partir de um único lado (motion-analysis.js).
+    minimumObservedTorsoJointsSingleSide: 2,
     rapidDownwardDisplacement: 0.08,
     rapidDownwardSpeedPerSecond: 0.45,
     significantTrunkAngleChangeDegrees: 28,
@@ -39,10 +42,14 @@ function usableSample(sample, config) {
     const centerY = sample?.centers?.body?.normalizedY;
     const torsoCount = sample?.observedJointsByRegion?.torso;
     const observedCount = sample?.boundingBoxPointsUsed;
+    const singleSide = sample?.centers?.body?.source === "left" || sample?.centers?.body?.source === "right";
+    const minimumTorso = singleSide
+        ? config.minimumObservedTorsoJointsSingleSide ?? config.minimumObservedTorsoJoints
+        : config.minimumObservedTorsoJoints;
     return sample?.personDetection?.detected === true &&
         (sample.visibility === "BOA VISIBILIDADE" || sample.visibility === "VISIBILIDADE PARCIAL") &&
         finite(centerY) && finite(sample.trunkAngleDegrees) &&
-        finite(torsoCount) && torsoCount >= config.minimumObservedTorsoJoints &&
+        finite(torsoCount) && torsoCount >= minimumTorso &&
         finite(observedCount) && observedCount >= config.minimumObservedJoints;
 }
 

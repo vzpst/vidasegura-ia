@@ -7,6 +7,7 @@ import { installHistory } from "./history.js";
 import { installSensors } from "./sensors.js";
 import { installMotionAnalysis } from "./motion-analysis.js";
 import { installFallDetection } from "./fall-detection.js";
+import { installFallSeverity } from "./fall-severity.js";
 
 const app = {
     camera: document.getElementById("camera"),
@@ -55,6 +56,7 @@ installPosture(app);
 installVisibility(app);
 installMotionAnalysis(app);
 installFallDetection(app);
+installFallSeverity(app);
 installPose(app);
 installCamera(app);
 installSensors(app);
@@ -66,6 +68,7 @@ document.getElementById("stopCamera").addEventListener("click", app.stopCamera);
 document.getElementById("flipCamera").addEventListener("click", app.switchCamera);
 document.getElementById("startSensors").addEventListener("click", app.startSensors);
 document.getElementById("stopSensors").addEventListener("click", app.stopSensors);
+document.getElementById("fallAcknowledge").addEventListener("click", () => app.acknowledgeFallSeverity());
 document.getElementById("clearLog").addEventListener("click", () => { document.getElementById("eventLog").innerHTML = '<p class="empty-state">Nenhum evento registrado nesta sessão.</p>'; });
 
 const pageTitles = {
