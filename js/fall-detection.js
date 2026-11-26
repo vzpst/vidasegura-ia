@@ -23,9 +23,18 @@ export const FALL_DETECTION_CONFIG = Object.freeze({
     // A descida é medida numa janela curta, não só entre dois frames: a 25 fps uma
     // queda real desloca o centro ~0,03 por frame e nunca chegaria a 0,08 num passo.
     descentWindowMs: 700,
+    // Descida muito forte basta sozinha (queda "desabando", sem girar o tronco),
+    // exceto quando a pessoa termina sentada (sentar rápido numa cadeira).
+    strongDropDisplacement: 0.15,
+    strongDropSpeedPerSecond: 0.6,
+    // Limiares de deslocamento valem para uma pessoa que ocupa ~60% da altura do
+    // quadro em pé; pessoas mais longe (menores) usam limiares proporcionalmente
+    // menores, até 45% dos valores originais.
+    referenceBodyHeight: 0.6,
+    minimumBodyScale: 0.45,
     significantTrunkAngleChangeDegrees: 28,
     lowPositionDisplacement: 0.14,
-    minimumLowPersistenceMs: 1200,
+    minimumLowPersistenceMs: 700,
     minimumLowObservationSamples: 3,
     recoveryUpwardDisplacement: 0.05,
     recoveryUpwardSpeedPerSecond: 0.20,
@@ -65,6 +74,20 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
     let sequenceExpiryTimer = null;
     let sequenceToken = 0;
     let recentCenters = [];
+    let standingHeight = null;
+
+    // Altura típica da pessoa em pé no quadro (média móvel); 1 = tamanho de referência.
+    function bodyScale() {
+        if (!finite(standingHeight)) return 1;
+        return Math.min(1, Math.max(config.minimumBodyScale ?? 1,
+            standingHeight / (config.referenceBodyHeight ?? standingHeight)));
+    }
+
+    function trackBodyHeight(sample) {
+        const height = sample?.boundingBox?.heightNormalized;
+        if (sample?.posture !== "EM PÉ" || !finite(height) || height <= 0) return;
+        standingHeight = finite(standingHeight) ? standingHeight + 0.2 * (height - standingHeight) : height;
+    }
 
     function snapshot(timestamp, reason, indicators = {}) {
         return {
@@ -137,10 +160,20 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
             item.timestamp < sample.timestamp && item.source === source);
         const movement = { drop: 0, dropSpeed: 0, rise: 0, riseSpeed: 0 };
         for (const item of recentCenters) {
+            movement.drop = Math.max(movement.drop, y - item.y);
+            movement.rise = Math.max(movement.rise, item.y - y);
+        }
+        // A velocidade vem do trecho mais rápido que cobre pelo menos metade do deslocamento:
+        // usa o último quadro ainda parado (não o mais antigo) e ignora o tremor dos pontos.
+        for (const item of recentCenters) {
             const seconds = (sample.timestamp - item.timestamp) / 1000;
             const delta = y - item.y;
-            if (delta > movement.drop) Object.assign(movement, { drop: delta, dropSpeed: delta / seconds });
-            if (-delta > movement.rise) Object.assign(movement, { rise: -delta, riseSpeed: -delta / seconds });
+            if (delta > 0 && delta >= movement.drop / 2) {
+                movement.dropSpeed = Math.max(movement.dropSpeed, delta / seconds);
+            }
+            if (delta < 0 && -delta >= movement.rise / 2) {
+                movement.riseSpeed = Math.max(movement.riseSpeed, -delta / seconds);
+            }
         }
         recentCenters.push({ timestamp: sample.timestamp, y, source });
         return movement;
@@ -206,6 +239,8 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
         const verticalSpeed = sample.displacement?.normalizedYPerSecond;
         const hasVerticalMovement = finite(deltaY) && finite(verticalSpeed);
         const recent = windowMovement(sample);
+        trackBodyHeight(sample);
+        const scale = bodyScale();
         const posture = KNOWN_POSTURES.has(sample.posture) ? sample.posture : null;
         const previousPosture = KNOWN_POSTURES.has(previousSample.posture) ? previousSample.posture : null;
         const postureTransition = Boolean(posture && previousPosture && posture !== previousPosture);
@@ -214,10 +249,13 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
             angleDifferenceDegrees(sample.trunkAngleDegrees,
                 reference?.trunkAngleDegrees ?? previousSample.trunkAngleDegrees) >= config.significantTrunkAngleChangeDegrees;
         const rapidDownward = (hasVerticalMovement &&
-            deltaY >= config.rapidDownwardDisplacement &&
-            verticalSpeed >= config.rapidDownwardSpeedPerSecond) ||
-            (recent.drop >= config.rapidDownwardDisplacement &&
-                recent.dropSpeed >= config.rapidDownwardSpeedPerSecond);
+            deltaY >= config.rapidDownwardDisplacement * scale &&
+            verticalSpeed >= config.rapidDownwardSpeedPerSecond * scale) ||
+            (recent.drop >= config.rapidDownwardDisplacement * scale &&
+                recent.dropSpeed >= config.rapidDownwardSpeedPerSecond * scale);
+        const strongDrop = finite(config.strongDropDisplacement) &&
+            recent.drop >= config.strongDropDisplacement * scale &&
+            recent.dropSpeed >= config.strongDropSpeedPerSecond * scale && posture !== "SENTADA";
         const lowerPostureTransition = postureTransition && LOWER_POSTURES.has(posture) &&
             (previousPosture === "EM PÉ" || previousPosture === "SENTADA");
         const indicators = {
@@ -228,7 +266,7 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
             postureTransition
         };
 
-        if (!sequence && rapidDownward && (angleChanged || lowerPostureTransition)) {
+        if (!sequence && rapidDownward && (angleChanged || lowerPostureTransition || strongDrop)) {
             sequence = {
                 startedAt: timestamp,
                 basePosture: reference?.posture ?? previousPosture,
@@ -255,7 +293,7 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
         }
 
         if (hasVerticalMovement) sequence.downwardDisplacement += deltaY;
-        const lowPosition = sequence.downwardDisplacement >= config.lowPositionDisplacement &&
+        const lowPosition = sequence.downwardDisplacement >= config.lowPositionDisplacement * scale &&
             (LOWER_POSTURES.has(posture) || posture === null);
         if (lowPosition) {
             sequence.everLow = true;
@@ -267,12 +305,12 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
         }
 
         const upwardMovement = (hasVerticalMovement &&
-            deltaY <= -config.recoveryUpwardDisplacement &&
-            verticalSpeed <= -config.recoveryUpwardSpeedPerSecond) ||
-            (recent.rise >= config.recoveryUpwardDisplacement &&
-                recent.riseSpeed >= config.recoveryUpwardSpeedPerSecond);
+            deltaY <= -config.recoveryUpwardDisplacement * scale &&
+            verticalSpeed <= -config.recoveryUpwardSpeedPerSecond * scale) ||
+            (recent.rise >= config.recoveryUpwardDisplacement * scale &&
+                recent.riseSpeed >= config.recoveryUpwardSpeedPerSecond * scale);
         const recoveryMovement = sequence.everLow && upwardMovement &&
-            (sequence.downwardDisplacement <= config.lowPositionDisplacement / 2 || posture === "EM PÉ");
+            (sequence.downwardDisplacement <= config.lowPositionDisplacement * scale / 2 || posture === "EM PÉ");
         const posturalRecovery = sequence.everLow && posture === "EM PÉ" &&
             previousPosture !== "EM PÉ";
         if (recoveryMovement || posturalRecovery) {
@@ -327,6 +365,7 @@ export function createFallDetector({ config = FALL_DETECTION_CONFIG, onExpire = 
 
     function reset() {
         breakContinuity();
+        standingHeight = null;
         state = FALL_DETECTION_STATES.ANALISE_INCONCLUSIVA;
         return snapshot(null, "SESSÃO_REINICIADA");
     }

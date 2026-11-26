@@ -13,7 +13,9 @@ function sample(timestamp, { y = 0.4, posture = "EM PÉ", speed = 0, detected = 
         personDetection: { detected },
         visibility,
         posture,
-        centers: { body: detected ? { normalizedY: y, source: "bilateral" } : null },
+        // speed > 0 simula movimento real do corpo (o centro se desloca no quadro).
+        centers: { body: detected ? { normalizedX: 0.5 + (speed > 0 ? 0.08 * Math.sin(timestamp / 150) : 0),
+            normalizedY: y, source: "bilateral" } : null },
         displacement: { normalizedXPerSecond: speed, normalizedYPerSecond: 0 }
     };
 }
@@ -175,4 +177,26 @@ test("pessoa some após descida e volta em pé: encerra como recuperação", () 
     }
     assert.equal(result.phase, "ENCERRADO");
     assert.equal(closed[0].outcome, "RECUPERADA_LOGO_APÓS_IMPACTO");
+});
+
+test("tremor normal dos pontos ainda conta como imobilidade (nível 3 rápido)", () => {
+    const tracker = createFallSeverityTracker();
+    startPossibleFall(tracker);
+    let result;
+    let t = 2000;
+    for (; t <= 500 + config.gracePeriodMs + config.immobileForCriticalMs + 500; t += 40) {
+        const jitter = (Math.sin(t) * 0.006);
+        const s = sample(t, { y: 0.7 + jitter, posture: "DEITADA" });
+        s.centers.body.normalizedX = 0.5 - jitter;
+        result = tracker.update(fall(S.ANALISE_INCONCLUSIVA, t), s);
+    }
+    assert.equal(result.level, SEVERITY_LEVELS.PRIORITY);
+    assert.ok(t - 500 < config.criticalAfterImpactMs);
+});
+
+test("nível 1 aparece já no início do acompanhamento, sem som", () => {
+    const tracker = createFallSeverityTracker();
+    const result = startPossibleFall(tracker);
+    assert.equal(result.label, "Nível 1 · Possível queda detectada");
+    assert.equal(result.alarm, "nenhum");
 });

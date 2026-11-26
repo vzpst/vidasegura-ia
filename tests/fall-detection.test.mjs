@@ -441,3 +441,61 @@ test("perder a pessoa durante a descida suspeita é sinalizado como rastreio per
     const again = fixture.frame({ timestamp: 1750, absent: true });
     assert.equal(again.result.reason, "PESSOA_AUSENTE");
 });
+
+test("desabar sem girar o tronco (descida muito forte) também inicia suspeita", () => {
+    const fixture = createFixture();
+    fixture.frame({ timestamp: 1000 });
+    const results = [];
+    for (let index = 1; index <= 8; index++) {
+        results.push(fixture.frame({ timestamp: 1000 + index * 40, dy: index * 30, posture: "EM PÉ" }).result);
+    }
+    assert.ok(results.some(result => result.state === S.DESCIDA_SUSPEITA));
+});
+
+test("sentar rápido numa cadeira (termina SENTADA, sem girar o tronco) não usa a regra da descida forte", () => {
+    const fixture = createFixture();
+    fixture.frame({ timestamp: 1000 });
+    const results = [];
+    for (let index = 1; index <= 8; index++) {
+        results.push(fixture.frame({ timestamp: 1000 + index * 40, dy: index * 25,
+            posture: index >= 2 ? "SENTADA" : "EM PÉ" }).result);
+    }
+    assert.ok(results.every(result => result.state !== S.DESCIDA_SUSPEITA));
+});
+
+test("pessoa longe da câmera (pequena no quadro) usa limiares proporcionais", () => {
+    const config = { ...FALL_DETECTION_CONFIG, strongDropDisplacement: null };
+    const detector = createFallDetector({ config });
+    const motion = createMotionAnalyzer({ now: () => 100_000 });
+    const small = (dy, shoulderDx, posture) => {
+        const pose = { keypoints: jointNames.map(name => {
+            const [x, y] = base[name];
+            return { name, x: 500 + (x - 500) * 0.4 + (name.includes("shoulder") ? shoulderDx : 0),
+                y: 300 + (y - 250) * 0.4 + dy, score: 0.95 };
+        }) };
+        return { pose, posture };
+    };
+    const run = (timestamp, { pose, posture }) => detector.analyze(motion.recordInference({
+        pose, analysisResult: makeAnalysisResult(pose, timestamp, posture), videoWidth: 1000, videoHeight: 1000 }));
+    for (let index = 0; index < 5; index++) run(1000 + index * 40, small(0, 0, "EM PÉ"));
+    const results = [];
+    for (let index = 1; index <= 6; index++) {
+        results.push(run(1200 + index * 40, small(index * 12, index * 12, "EM PÉ")));
+    }
+    // 6 × 12 px = 0,072 do quadro: abaixo de 0,08, mas grande para uma pessoa com 26% da altura.
+    assert.ok(results.some(result => result.state === S.DESCIDA_SUSPEITA));
+});
+
+test("tremor dos pontos (pessoa parada ou sentando devagar) não dispara descida", () => {
+    const fixture = createFixture();
+    const results = [];
+    let seed = 7;
+    const noise = () => { seed = (seed * 16807) % 2147483647; return (seed / 2147483647 - 0.5) * 12; };
+    for (let index = 0; index < 150; index++) {
+        const slowSit = index > 75 ? (index - 75) * 2 : 0; // ~0,05 do quadro por segundo
+        results.push(fixture.frame({ timestamp: 1000 + index * 33, dy: slowSit + noise(),
+            shoulderDx: noise(), posture: index > 120 ? "SENTADA" : "EM PÉ" }).result);
+    }
+    assert.ok(results.every(result => result.state !== S.DESCIDA_SUSPEITA));
+    noPossibleFall(results);
+});

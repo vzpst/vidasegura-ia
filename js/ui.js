@@ -214,9 +214,15 @@ export function installUI(app) {
 
         const seconds = Number.isFinite(result.elapsedSinceImpactMs) ? Math.round(result.elapsedSinceImpactMs / 1000) : null;
         let text = result.label;
+        if (result.phase === "OBSERVANDO_DESCIDA") text = "Descida rápida detectada · analisando";
+        else if (result.level === 0 && result.phase === "SEM_EVENTO" && result.evidence === "insuficiente") {
+            text = "Monitorando · pessoa fora de vista ou pouco visível";
+        } else if (result.level === 0 && result.phase === "SEM_EVENTO") text = "Monitorando · sem queda";
         if (result.phase === "EM_ACOMPANHAMENTO" && seconds !== null) text += ` · ${seconds}s após o impacto`;
         if (result.trackingLost) text += " · pessoa saiu de vista após descida rápida";
-        else if (result.evidence === "insuficiente") text += " · evidência visual insuficiente";
+        else if (result.evidence === "insuficiente" && result.phase === "EM_ACOMPANHAMENTO") {
+            text += " · evidência visual insuficiente";
+        }
         if (result.phase === "ENCERRADO" && result.outcome) text += ` · encerrado: ${outcomeLabels[result.outcome] ?? result.outcome}`;
         state.textContent = text;
         state.dataset.state = severityStates[result.level] ?? "waiting";
@@ -227,18 +233,22 @@ export function installUI(app) {
         lastRenderedLevel = result.phase === "EM_ACOMPANHAMENTO" ? result.level : 0;
 
         if (!alert) return;
-        const showAlert = result.alarm === "aviso" || result.alarm === "alerta";
+        // Nível 1 em acompanhamento já aparece (sem som) para a pessoa poder tocar em "Estou bem".
+        const showAlert = result.alarm === "aviso" || result.alarm === "alerta" ||
+            (result.phase === "EM_ACOMPANHAMENTO" && result.level >= 1);
         alert.hidden = !showAlert;
         alert.dataset.level = String(result.level);
         if (showAlert) {
             document.getElementById("fallAlertTitle").textContent = result.label;
             document.getElementById("fallAlertText").textContent = result.level >= 3
                 ? "A pessoa parece estar em posição baixa há muito tempo ou imóvel. Verifique imediatamente."
+                : result.level === 1
+                    ? "Observando se a pessoa se levanta. Se estiver tudo bem, toque em \"Estou bem\"."
                 : result.trackingLost
                     ? "A pessoa saiu do campo de visão logo após uma descida rápida e não voltou. Verifique."
                     : "Posição baixa mantida após a carência. Se estiver tudo bem, toque em \"Estou bem\".";
         }
-        if (result.level >= 3 && lastBeepLevel < 3) beep();
+        if (result.level >= 2 && lastBeepLevel < result.level && result.phase === "EM_ACOMPANHAMENTO") beep();
         lastBeepLevel = result.phase === "EM_ACOMPANHAMENTO" ? result.level : 0;
     };
 
@@ -254,7 +264,7 @@ export function installUI(app) {
         visibilityState.dataset.state = "waiting";
     }
     if (fallRiskState) {
-        fallRiskState.textContent = "NÃO AVALIADO";
+        fallRiskState.textContent = "Aguardando câmera";
         fallRiskState.dataset.state = "waiting";
     }
 

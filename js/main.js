@@ -55,6 +55,11 @@ installUI(app);
 installHistory(app);
 installPosture(app);
 installPostureModel(app);
+// Se este texto não aparecer ao lado da versão, o navegador está rodando JavaScript antigo (Ctrl+F5).
+app.postureModelReady.then(() => {
+    const version = document.getElementById("appVersion");
+    if (version) version.textContent += ` · JS atualizado · modelo de postura ${app.postureModelStatus}`;
+});
 installVisibility(app);
 installMotionAnalysis(app);
 installFallDetection(app);

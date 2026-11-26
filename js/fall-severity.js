@@ -6,7 +6,8 @@
 // Objetivo: não disparar alarme para quem se recuperou logo após o impacto.
 //
 //   Nível 0  Sem evento.
-//   Nível 1  Desequilíbrio / possível queda com recuperação. Só histórico.
+//   Nível 1  Possível queda acabou de acontecer (aviso visual discreto, sem som)
+//            ou desequilíbrio com recuperação logo após o impacto (só histórico).
 //   Nível 2  Posição baixa além da carência. Aviso local com "Estou bem".
 //   Nível 3  Posição baixa prolongada ou imóvel. Alerta destacado na página.
 //
@@ -18,11 +19,14 @@ import { FALL_DETECTION_STATES } from "./fall-detection.js";
 // PROVISÓRIOS: definidos para demonstração, não são limiares clínicos.
 export const FALL_SEVERITY_CONFIG = Object.freeze({
     status: "PROVISÓRIO — ajustar após testes com câmera real e dados representativos",
-    gracePeriodMs: 10_000,            // carência após o impacto antes de qualquer aviso
-    criticalAfterImpactMs: 30_000,    // tempo no chão que leva ao nível 3
-    immobileForCriticalMs: 15_000,    // imobilidade contínua (após a carência) que leva ao nível 3
-    immobileSpeedPerSecond: 0.03,     // velocidade normalizada abaixo da qual a pessoa é considerada imóvel
-    movementSmoothing: 0.3,           // suavização exponencial da velocidade observada
+    gracePeriodMs: 5_000,             // carência após o impacto antes do aviso (nível 2)
+    criticalAfterImpactMs: 15_000,    // tempo no chão que leva ao nível 3
+    immobileForCriticalMs: 6_000,     // imobilidade contínua (após a carência) que leva ao nível 3
+    // Imobilidade = o centro do corpo variou menos que immobileRange (fração do
+    // quadro) dentro de immobileWindowMs. Uma janela ignora o tremor normal dos
+    // pontos do MoveNet, que fazia a velocidade quadro a quadro nunca chegar a zero.
+    immobileWindowMs: 1_500,
+    immobileRange: 0.03,
     lowOffsetFromReference: 0.07,     // quanto o centro corporal precisa estar abaixo da referência
     recoveryMarginFromReference: 0.05,// centro de volta perto da referência conta como recuperação
     recoverySamplesRequired: 3,       // amostras seguidas compatíveis com recuperação
@@ -38,12 +42,13 @@ export const SEVERITY_LEVELS = Object.freeze({
 
 const LEVEL_LABELS = Object.freeze({
     0: "Sem evento",
-    1: "Nível 1 · Desequilíbrio ou possível queda com recuperação",
+    1: "Nível 1 · Possível queda detectada",
     2: "Nível 2 · Possível queda: atenção",
     3: "Nível 3 · Possível queda: prioritária"
 });
 
 const LEVEL_ALARMS = Object.freeze({ 0: "nenhum", 1: "nenhum", 2: "aviso", 3: "alerta" });
+const RECOVERED_LABEL = "Nível 1 · Desequilíbrio ou possível queda com recuperação";
 
 const finite = Number.isFinite;
 
@@ -53,11 +58,6 @@ function sampleHasEvidence(sample) {
         (sample.visibility === "BOA VISIBILIDADE" || sample.visibility === "VISIBILIDADE PARCIAL");
 }
 
-function sampleSpeed(sample) {
-    const { normalizedXPerSecond: vx, normalizedYPerSecond: vy } = sample?.displacement ?? {};
-    if (!finite(vx) || !finite(vy)) return null;
-    return Math.hypot(vx, vy);
-}
 
 export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEventClosed = () => {} } = {}) {
     let lastStableSample = null;   // última amostra com evidência fora de qualquer evento
@@ -110,7 +110,7 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             phase: "ENCERRADO",
             outcome,
             level: summary.maxLevel === SEVERITY_LEVELS.RECOVERED ? SEVERITY_LEVELS.RECOVERED : SEVERITY_LEVELS.NONE,
-            label: summary.maxLevel === SEVERITY_LEVELS.RECOVERED ? LEVEL_LABELS[1] : LEVEL_LABELS[0]
+            label: summary.maxLevel === SEVERITY_LEVELS.RECOVERED ? RECOVERED_LABEL : LEVEL_LABELS[0]
         });
         return lastResult;
     }
@@ -122,7 +122,7 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             impactAt,
             referenceY: candidate?.referenceY ?? lastStableSample?.centers?.body?.normalizedY ?? null,
             level: SEVERITY_LEVELS.RECOVERED,
-            smoothedSpeed: null,
+            recentCenters: [],
             immobileSince: null,
             recoveryStreak: 0,
             evidenceMissing: false,
@@ -139,11 +139,17 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
     }
 
     function updateMovement(sample, timestamp) {
-        const speed = sampleSpeed(sample);
-        if (speed === null) return;
-        event.smoothedSpeed = event.smoothedSpeed === null ? speed
-            : event.smoothedSpeed + config.movementSmoothing * (speed - event.smoothedSpeed);
-        if (event.smoothedSpeed < config.immobileSpeedPerSecond) event.immobileSince ??= timestamp;
+        const { normalizedX: x, normalizedY: y } = sample.centers.body;
+        if (!finite(y)) return;
+        event.recentCenters.push({ timestamp, x: finite(x) ? x : 0, y });
+        event.recentCenters = event.recentCenters.filter(item => timestamp - item.timestamp <= config.immobileWindowMs);
+        const first = event.recentCenters[0];
+        // Só decide depois de ter quase uma janela inteira de observação.
+        if (timestamp - first.timestamp < config.immobileWindowMs * 0.66) return;
+        const xs = event.recentCenters.map(item => item.x);
+        const ys = event.recentCenters.map(item => item.y);
+        const range = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+        if (range < config.immobileRange) event.immobileSince ??= first.timestamp;
         else event.immobileSince = null;
     }
 
@@ -225,7 +231,8 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             if (timestamp - candidate.startedAt > config.candidateTimeoutMs) {
                 candidate = null;
             }
-            lastResult = idleResult(timestamp, { phase: candidate ? "OBSERVANDO_DESCIDA" : "SEM_EVENTO" });
+            lastResult = idleResult(timestamp, { phase: candidate ? "OBSERVANDO_DESCIDA" : "SEM_EVENTO",
+                evidence: evidence ? "adequada" : "insuficiente" });
             return lastResult;
         }
 
@@ -233,7 +240,9 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             lastStableSample = sample;
         }
         // Mantém o desfecho anterior visível até a próxima mudança relevante.
-        if (lastResult.phase !== "ENCERRADO") lastResult = idleResult(timestamp);
+        if (lastResult.phase !== "ENCERRADO" || timestamp - lastResult.timestamp > config.gracePeriodMs) {
+            lastResult = idleResult(timestamp, { evidence: evidence ? "adequada" : "insuficiente" });
+        }
         return lastResult;
     }
 

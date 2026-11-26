@@ -145,14 +145,14 @@
                                 </div>
                                 <div class="analysis-stat">
                                     <span class="analysis-stat-icon model"><svg><use href="#icon-shield"/></svg></span>
-                                    <div><small>POSSÍVEL QUEDA · GRAVIDADE</small><strong id="fallRiskState" data-state="waiting" aria-live="polite">NÃO AVALIADO</strong></div>
+                                    <div><small>POSSÍVEL QUEDA · GRAVIDADE</small><strong id="fallRiskState" data-state="waiting" aria-live="polite">Aguardando câmera</strong></div>
                                 </div>
                             </div>
                             <div id="fallAlert" class="fall-alert" data-level="0" role="alert" hidden>
                                 <div><strong id="fallAlertTitle">Possível queda</strong><p id="fallAlertText">Verifique a pessoa.</p></div>
                                 <button id="fallAcknowledge" class="button button-primary" type="button">Estou bem</button>
                             </div>
-                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios.</p>
+                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios. <span id="appVersion" class="app-version">versão 2026-11-26.2</span></p>
                         </aside>
                     </div>
                 </section>
@@ -190,6 +190,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=2026-11-26.2"></script>
 </body>
 </html>
