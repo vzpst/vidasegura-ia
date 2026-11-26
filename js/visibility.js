@@ -63,7 +63,9 @@ export function installVisibility(app) {
     app.createAnalysisResult = function(pose, timestamp = Date.now()) {
     const visibility = app.evaluateBodyVisibility(pose);
     const geometricPosture = app.classifyPose(pose);
-    const prediction = app.predictPostureModel?.(pose, app.camera?.videoWidth, app.camera?.videoHeight) ?? null;
+    const frameWidth = app.camera?.videoWidth || app.demoFrameSize?.width;
+    const frameHeight = app.camera?.videoHeight || app.demoFrameSize?.height;
+    const prediction = app.predictPostureModel?.(pose, frameWidth, frameHeight) ?? null;
     const fused = fusePosture(geometricPosture, prediction);
     const posture = fused.state;
     const posturePoints = posture === "DEITADA"

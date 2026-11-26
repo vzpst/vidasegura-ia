@@ -110,12 +110,14 @@
                             <div class="video-container">
                                 <video id="camera" autoplay playsinline muted></video>
                                 <canvas id="poseCanvas"></canvas>
+                                <div id="demoBanner" class="demo-banner" hidden title="Pontos corporais gerados por computador; nenhuma câmera em uso">SIMULAÇÃO · sem câmera</div>
                                 <div id="placeholder"><span class="placeholder-icon"><svg><use href="#icon-camera"/></svg></span><strong>Câmera desativada</strong><small>Ative a câmera para iniciar a análise visual.</small></div>
                             </div>
                             <div class="camera-controls">
                                 <button id="startCamera" class="button button-primary"><span aria-hidden="true">▶</span> Iniciar câmera</button>
                                 <button id="stopCamera" class="button button-secondary" disabled><span aria-hidden="true">■</span> Parar câmera</button>
                                 <button id="flipCamera" class="button button-quiet" disabled><span aria-hidden="true">⇄</span> Trocar câmera</button>
+                                <span class="demo-controls"><select id="demoScenario" class="demo-select" aria-label="Cenário da demonstração de queda"><option value="imovel">Cai e fica imóvel</option><option value="levanta">Cai e levanta logo</option><option value="some">Cai e sai da imagem</option></select><button id="demoFall" class="button button-quiet" title="Demonstração simulada, sem câmera">▶ Simular queda</button></span>
                             </div>
                         </article>
 
@@ -152,7 +154,7 @@
                                 <div><strong id="fallAlertTitle">Possível queda</strong><p id="fallAlertText">Verifique a pessoa.</p></div>
                                 <button id="fallAcknowledge" class="button button-primary" type="button">Estou bem</button>
                             </div>
-                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios. <span id="appVersion" class="app-version">versão 2026-11-26.2</span></p>
+                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios. <span id="appVersion" class="app-version">versão 2026-11-26.3</span></p>
                         </aside>
                     </div>
                 </section>
@@ -190,6 +192,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-    <script type="module" src="js/main.js?v=2026-11-26.2"></script>
+    <script type="module" src="js/main.js?v=2026-11-26.3"></script>
 </body>
 </html>

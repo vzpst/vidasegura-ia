@@ -376,3 +376,10 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
     .nav-link { min-height: 34px; }
     .camera-controls .button { flex: 1 1 auto; }
 }
+
+/* Demonstração de queda (simulada, sem câmera) */
+.demo-controls { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.demo-select { min-height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--indicator-bg); color: inherit; font: inherit; font-size: 12px; }
+.demo-banner { position: absolute; top: 10px; left: 10px; z-index: 4; padding: 5px 10px; border-radius: 6px; background: rgba(214, 132, 20, .92); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+.demo-banner[hidden] { display: none; }
+@media (max-width: 640px) { .demo-controls { margin-left: 0; width: 100%; } .demo-controls .button, .demo-select { flex: 1 1 auto; } }

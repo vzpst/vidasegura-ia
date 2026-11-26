@@ -9,6 +9,7 @@ import { installSensors } from "./sensors.js";
 import { installMotionAnalysis } from "./motion-analysis.js";
 import { installFallDetection } from "./fall-detection.js";
 import { installFallSeverity } from "./fall-severity.js";
+import { installFallDemo } from "./fall-demo.js";
 
 const app = {
     camera: document.getElementById("camera"),
@@ -65,6 +66,7 @@ installMotionAnalysis(app);
 installFallDetection(app);
 installFallSeverity(app);
 installPose(app);
+installFallDemo(app);
 installCamera(app);
 installSensors(app);
 
