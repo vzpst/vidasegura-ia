@@ -50,3 +50,6 @@ ml/**/*.ckpt.*
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Modelos exportados para o navegador (treinados localmente; não versionar)
+models/

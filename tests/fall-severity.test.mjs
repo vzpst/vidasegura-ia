@@ -144,3 +144,35 @@ test("reset (troca ou desligamento da câmera) limpa o evento sem gerar alarme",
     assert.equal(result.level, SEVERITY_LEVELS.NONE);
     assert.equal(closed.length, 0);
 });
+
+test("pessoa some logo após descida rápida: evento sem alarme na carência, depois só aviso", () => {
+    const tracker = createFallSeverityTracker();
+    tracker.update(fall(S.MONITORANDO, 0), sample(0));
+    tracker.update(fall(S.DESCIDA_SUSPEITA, 500), sample(500, { y: 0.55, speed: 0.6 }));
+    const lost = { state: S.ANALISE_INCONCLUSIVA, timestamp: 800, sequenceAgeMs: 300,
+        indicators: { trackingLostAfterDescent: true } };
+    let result = tracker.update(lost, sample(800, { detected: false }));
+    assert.equal(result.phase, "EM_ACOMPANHAMENTO");
+    assert.equal(result.trackingLost, true);
+    assert.equal(result.alarm, "nenhum");
+    for (let t = 1000; t <= 500 + config.criticalAfterImpactMs + 5000; t += 500) {
+        result = tracker.update(fall(S.ANALISE_INCONCLUSIVA, t), sample(t, { detected: false }));
+    }
+    assert.equal(result.level, SEVERITY_LEVELS.ATTENTION);
+    assert.equal(result.alarm, "aviso");
+});
+
+test("pessoa some após descida e volta em pé: encerra como recuperação", () => {
+    const closed = [];
+    const tracker = createFallSeverityTracker({ onEventClosed: event => closed.push(event) });
+    tracker.update(fall(S.MONITORANDO, 0), sample(0));
+    tracker.update(fall(S.DESCIDA_SUSPEITA, 500), sample(500, { y: 0.55, speed: 0.6 }));
+    tracker.update({ state: S.ANALISE_INCONCLUSIVA, timestamp: 800, sequenceAgeMs: 300,
+        indicators: { trackingLostAfterDescent: true } }, sample(800, { detected: false }));
+    let result;
+    for (let t = 1500; t < 1500 + config.recoverySamplesRequired * 100; t += 100) {
+        result = tracker.update(fall(S.MONITORANDO, t), sample(t));
+    }
+    assert.equal(result.phase, "ENCERRADO");
+    assert.equal(closed[0].outcome, "RECUPERADA_LOGO_APÓS_IMPACTO");
+});

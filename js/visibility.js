@@ -1,3 +1,5 @@
+import { fusePosture } from "./posture-model.js";
+
 // Funções extraídas do fluxo original; o estado e as dependências são injetados por main.js.
 export function installVisibility(app) {
     app.evaluateBodyVisibility = function(pose) {
@@ -60,7 +62,10 @@ export function installVisibility(app) {
     };
     app.createAnalysisResult = function(pose, timestamp = Date.now()) {
     const visibility = app.evaluateBodyVisibility(pose);
-    const posture = app.classifyPose(pose);
+    const geometricPosture = app.classifyPose(pose);
+    const prediction = app.predictPostureModel?.(pose, app.camera?.videoWidth, app.camera?.videoHeight) ?? null;
+    const fused = fusePosture(geometricPosture, prediction);
+    const posture = fused.state;
     const posturePoints = posture === "DEITADA"
         ? ["left_shoulder", "right_shoulder", "left_hip", "right_hip"]
         : posture === "EM PÉ" || posture === "SENTADA"
@@ -74,7 +79,11 @@ export function installVisibility(app) {
         },
         posture: {
             state: posture ?? "INCONCLUSIVA",
-            method: "classifyPose",
+            method: fused.method,
+            geometric: geometricPosture ?? "INCONCLUSIVA",
+            model: prediction
+                ? { label: prediction.label, probability: prediction.probability }
+                : null,
             supportingPoints: visibility.pointObservations
                 .filter(point => posturePoints.includes(point.name) && point.availability === "OBSERVADO" && point.score >= 0.35)
                 .map(point => point.name)

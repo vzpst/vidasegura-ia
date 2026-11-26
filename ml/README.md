@@ -187,3 +187,34 @@ python ml\scripts\train_forest.py --demo-sintetico
 ```
 
 Para medir o efeito da oclusão simulada, rode também com `--sem-oclusao-no-treino` e compare os cenários `lado_*_oculto` e `aleatorio_50`.
+
+## Complemento com dados públicos (MPII Human Pose)
+
+Com poucos participantes, o modelo é treinado com articulações **marcadas à mão** do
+[MPII Human Pose](https://www.mpi-inf.mpg.de/departments/computer-vision-and-machine-learning/software-and-datasets/mpii-human-pose-dataset)
+(anotações sob licença BSD simplificada; as imagens **não** são usadas). Cite:
+Andriluka et al., *2D Human Pose Estimation: New Benchmark and State of the Art Analysis*, CVPR 2014.
+
+1. Baixe só as anotações (≈12 MB) para `ml/data/public/mpii/` (pasta ignorada pelo Git) e extraia o zip.
+2. Converta para o JSONL do projeto:
+
+```powershell
+python ml\scripts\import_mpii.py ml\data\public\mpii\mpii_human_pose_v1_u12_2\mpii_human_pose_v1_u12_1.mat --saida ml\data\public\mpii_posturas.jsonl
+```
+
+3. Treine, teste nas amostras da câmera e exporte o modelo do navegador:
+
+```powershell
+python ml\scripts\train_public.py --publico ml\data\public\mpii_posturas.jsonl --camera ml\data\raw\*.jsonl --exportar-navegador models\posture-forest.json
+```
+
+Como os rótulos públicos são obtidos: "em pé" e "sentada" exigem atividade compatível
+**e** geometria estrita do esqueleto completo; "deitada" e "outra" (ajoelhada/inclinada) vêm
+da geometria estrita; casos ambíguos são descartados. O ponto de vista é estimado e a
+confiança de cada ponto é simulada. Registros saem com `data_origin = "public_mpii"` e
+continuam recusados pelo pipeline da coleta.
+
+O número que importa é o **teste externo**: o modelo treinado só com dados públicos é
+avaliado nas amostras da câmera que nunca viu. Com um único participante, ele é apenas
+indicativo. `models/` fica fora do Git; sem o arquivo, o app usa só a regra geométrica.
+No navegador (`js/posture-model.js`) o modelo só decide quando a probabilidade é ≥ 0,6.

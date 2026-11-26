@@ -88,6 +88,7 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             alarm: event.evidenceMissing ? (level >= 2 ? LEVEL_ALARMS[level] : "nenhum") : LEVEL_ALARMS[level],
             phase: "EM_ACOMPANHAMENTO",
             evidence: event.evidenceMissing ? "insuficiente" : "adequada",
+            trackingLost: Boolean(event.trackingLost && event.evidenceMissing),
             elapsedSinceImpactMs: Math.max(0, timestamp - event.impactAt),
             immobileMs: event.immobileSince !== null ? Math.max(0, timestamp - event.immobileSince) : 0,
             outcome: null,
@@ -124,7 +125,8 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             smoothedSpeed: null,
             immobileSince: null,
             recoveryStreak: 0,
-            evidenceMissing: false
+            evidenceMissing: false,
+            trackingLost: false
         };
         candidate = null;
     }
@@ -170,6 +172,10 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
                 // Sem evidência: congela o nível, não escala e não encerra.
                 event.evidenceMissing = true;
                 event.recoveryStreak = 0;
+                // Saiu de vista logo após a descida: sem como ver recuperação, sobe só até "atenção".
+                if (event.trackingLost && timestamp - event.impactAt >= config.gracePeriodMs) {
+                    event.level = Math.max(event.level, SEVERITY_LEVELS.ATTENTION);
+                }
                 lastResult = eventResult(timestamp);
                 return lastResult;
             }
@@ -193,6 +199,14 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
             startEvent(timestamp, fallResult);
             updateMovement(sample, timestamp);
             escalate(timestamp);
+            lastResult = eventResult(timestamp);
+            return lastResult;
+        }
+
+        if (fallResult?.indicators?.trackingLostAfterDescent) {
+            startEvent(timestamp, fallResult);
+            event.trackingLost = true;
+            event.evidenceMissing = true;
             lastResult = eventResult(timestamp);
             return lastResult;
         }

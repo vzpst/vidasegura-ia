@@ -405,3 +405,39 @@ test("sentar ou deitar normalmente nunca gera automaticamente possível queda n�
     }
     noPossibleFall([...sitting, ...lying]);
 });
+
+test("queda a 25 fps (passos pequenos por frame) é detectada pela janela de descida", () => {
+    const fixture = createFixture();
+    const results = [fixture.frame({ timestamp: 1000 }).result];
+    for (let index = 1; index <= 10; index++) {
+        results.push(fixture.frame({ timestamp: 1000 + index * 40, dy: index * 30,
+            shoulderDx: index * 18, posture: "EM PÉ" }).result);
+    }
+    assert.ok(results.some(result => result.state === S.DESCIDA_SUSPEITA));
+    // Antes da janela, nenhum passo isolado de 0,03 chegava ao limiar de 0,08.
+    assert.ok(30 / 1000 < FALL_DETECTION_CONFIG.rapidDownwardDisplacement);
+});
+
+test("sentar devagar a 25 fps continua sem descida suspeita", () => {
+    const fixture = createFixture();
+    const results = [fixture.frame({ timestamp: 1000 }).result];
+    for (let index = 1; index <= 50; index++) {
+        results.push(fixture.frame({ timestamp: 1000 + index * 40, dy: index * 4,
+            shoulderDx: index * 3, posture: index > 40 ? "SENTADA" : "EM PÉ" }).result);
+    }
+    assert.ok(results.every(result => result.state !== S.DESCIDA_SUSPEITA));
+    noPossibleFall(results);
+});
+
+test("perder a pessoa durante a descida suspeita é sinalizado como rastreio perdido", () => {
+    const fixture = createFixture();
+    fixture.frame({ timestamp: 1000 });
+    fixture.frame({ timestamp: 1250, dy: 140, shoulderDx: 160, posture: "EM PÉ" });
+    const { result } = fixture.frame({ timestamp: 1500, absent: true });
+    assert.equal(result.state, S.ANALISE_INCONCLUSIVA);
+    assert.equal(result.reason, "RASTREIO_PERDIDO_APÓS_DESCIDA");
+    assert.equal(result.indicators.trackingLostAfterDescent, true);
+    assert.equal(result.sequenceAgeMs, 250);
+    const again = fixture.frame({ timestamp: 1750, absent: true });
+    assert.equal(again.result.reason, "PESSOA_AUSENTE");
+});

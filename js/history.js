@@ -1,6 +1,6 @@
 // Funções extraídas do fluxo original; o estado e as dependências são injetados por main.js.
 export function installHistory(app) {
-    const allowedPostures = new Set(["EM PÉ", "SENTADA", "DEITADA"]);
+    const allowedPostures = new Set(["EM PÉ", "SENTADA", "DEITADA", "OUTRA"]);
     const positionLimit = 300;
 
     // A linha do tempo normal contém somente a mudança estável e seu timestamp.

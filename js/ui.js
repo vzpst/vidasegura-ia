@@ -215,7 +215,8 @@ export function installUI(app) {
         const seconds = Number.isFinite(result.elapsedSinceImpactMs) ? Math.round(result.elapsedSinceImpactMs / 1000) : null;
         let text = result.label;
         if (result.phase === "EM_ACOMPANHAMENTO" && seconds !== null) text += ` · ${seconds}s após o impacto`;
-        if (result.evidence === "insuficiente") text += " · evidência visual insuficiente";
+        if (result.trackingLost) text += " · pessoa saiu de vista após descida rápida";
+        else if (result.evidence === "insuficiente") text += " · evidência visual insuficiente";
         if (result.phase === "ENCERRADO" && result.outcome) text += ` · encerrado: ${outcomeLabels[result.outcome] ?? result.outcome}`;
         state.textContent = text;
         state.dataset.state = severityStates[result.level] ?? "waiting";
@@ -233,7 +234,9 @@ export function installUI(app) {
             document.getElementById("fallAlertTitle").textContent = result.label;
             document.getElementById("fallAlertText").textContent = result.level >= 3
                 ? "A pessoa parece estar em posição baixa há muito tempo ou imóvel. Verifique imediatamente."
-                : "Posição baixa mantida após a carência. Se estiver tudo bem, toque em \"Estou bem\".";
+                : result.trackingLost
+                    ? "A pessoa saiu do campo de visão logo após uma descida rápida e não voltou. Verifique."
+                    : "Posição baixa mantida após a carência. Se estiver tudo bem, toque em \"Estou bem\".";
         }
         if (result.level >= 3 && lastBeepLevel < 3) beep();
         lastBeepLevel = result.phase === "EM_ACOMPANHAMENTO" ? result.level : 0;
@@ -270,7 +273,7 @@ export function installUI(app) {
             return;
         }
 
-        const postureLabels = { "EM PÉ": "Em pé", SENTADA: "Sentada", DEITADA: "Deitada" };
+        const postureLabels = { "EM PÉ": "Em pé", SENTADA: "Sentada", DEITADA: "Deitada", OUTRA: "Outra (ajoelhada ou inclinada)" };
         const today = new Date();
         positions.forEach(position => {
             const capturedAt = new Date(position.timestamp);

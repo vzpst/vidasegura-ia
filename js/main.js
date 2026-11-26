@@ -2,6 +2,7 @@ import { installUI } from "./ui.js";
 import { installCamera } from "./camera.js";
 import { installPose } from "./pose.js";
 import { installPosture } from "./posture.js";
+import { installPostureModel } from "./posture-model.js";
 import { installVisibility } from "./visibility.js";
 import { installHistory } from "./history.js";
 import { installSensors } from "./sensors.js";
@@ -53,6 +54,7 @@ for (const eventName of ["pointerup", "pointercancel", "pointerleave"]) app.flip
 installUI(app);
 installHistory(app);
 installPosture(app);
+installPostureModel(app);
 installVisibility(app);
 installMotionAnalysis(app);
 installFallDetection(app);
