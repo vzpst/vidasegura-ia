@@ -219,7 +219,7 @@ export function installUI(app) {
             text = "Monitorando · pessoa fora de vista ou pouco visível";
         } else if (result.level === 0 && result.phase === "SEM_EVENTO") text = "Monitorando · sem queda";
         if (result.phase === "EM_ACOMPANHAMENTO" && seconds !== null) text += ` · ${seconds}s após o impacto`;
-        if (result.trackingLost) text += " · pessoa saiu de vista após descida rápida";
+        if (result.trackingLost) text += " · pessoa saiu de vista após a possível queda";
         else if (result.evidence === "insuficiente" && result.phase === "EM_ACOMPANHAMENTO") {
             text += " · evidência visual insuficiente";
         }
@@ -245,7 +245,7 @@ export function installUI(app) {
                 : result.level === 1
                     ? "Observando se a pessoa se levanta. Se estiver tudo bem, toque em \"Estou bem\"."
                 : result.trackingLost
-                    ? "A pessoa saiu do campo de visão logo após uma descida rápida e não voltou. Verifique."
+                    ? "A pessoa saiu do campo de visão após a possível queda e não voltou. Verifique."
                     : "Posição baixa mantida após a carência. Se estiver tudo bem, toque em \"Estou bem\".";
         }
         if (result.level >= 2 && lastBeepLevel < result.level && result.phase === "EM_ACOMPANHAMENTO") beep();

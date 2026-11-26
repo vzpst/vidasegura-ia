@@ -116,16 +116,18 @@ test("'Estou bem' encerra o evento e desliga o aviso", () => {
     assert.equal(closed[0].maxLevel, SEVERITY_LEVELS.ATTENTION);
 });
 
-test("sem evidência visual o nível fica congelado e não escala", () => {
+test("pessoa vista no chão e depois perdida pela câmera sobe só até nível 2", () => {
     const tracker = createFallSeverityTracker();
     startPossibleFall(tracker);
-    let result;
-    for (let t = 2500; t <= 500 + config.criticalAfterImpactMs + 5000; t += 500) {
+    let result = tracker.update(fall(S.ANALISE_INCONCLUSIVA, 2500), sample(2500, { detected: false }));
+    assert.equal(result.level, SEVERITY_LEVELS.RECOVERED);
+    assert.equal(result.trackingLost, true);
+    for (let t = 3000; t <= 500 + config.criticalAfterImpactMs + 5000; t += 500) {
         result = tracker.update(fall(S.ANALISE_INCONCLUSIVA, t), sample(t, { detected: false }));
     }
-    assert.equal(result.level, SEVERITY_LEVELS.RECOVERED);
+    assert.equal(result.level, SEVERITY_LEVELS.ATTENTION);
     assert.equal(result.evidence, "insuficiente");
-    assert.equal(result.alarm, "nenhum");
+    assert.equal(result.alarm, "aviso");
 });
 
 test("movimento normal sem descida suspeita permanece no nível 0", () => {

@@ -11,8 +11,8 @@
 //   Nível 2  Posição baixa além da carência. Aviso local com "Estou bem".
 //   Nível 3  Posição baixa prolongada ou imóvel. Alerta destacado na página.
 //
-// A ausência de evidência (pessoa fora do quadro, visibilidade ruim) congela o
-// nível atual e marca a análise como inconclusiva; ela nunca aumenta o nível.
+// Se a pessoa some da imagem durante o acompanhamento, o nível sobe no máximo até
+// 2 (atenção) após a carência: sem imagem não há como avaliar imobilidade (nível 3).
 
 import { FALL_DETECTION_STATES } from "./fall-detection.js";
 
@@ -178,6 +178,9 @@ export function createFallSeverityTracker({ config = FALL_SEVERITY_CONFIG, onEve
                 // Sem evidência: congela o nível, não escala e não encerra.
                 event.evidenceMissing = true;
                 event.recoveryStreak = 0;
+                // A pessoa estava em acompanhamento (sem ter se recuperado) e sumiu da imagem:
+                // como não dá para ver uma recuperação, vale a mesma regra de quem sai de vista.
+                event.trackingLost = true;
                 // Saiu de vista logo após a descida: sem como ver recuperação, sobe só até "atenção".
                 if (event.trackingLost && timestamp - event.impactAt >= config.gracePeriodMs) {
                     event.level = Math.max(event.level, SEVERITY_LEVELS.ATTENTION);
