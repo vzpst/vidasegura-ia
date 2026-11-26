@@ -22,6 +22,13 @@ function makeCenter(points, width, height) {
     };
 }
 
+function sideTorso(joints, side) {
+    const shoulder = joints.find(point => point.name === `${side}_shoulder`);
+    const hip = joints.find(point => point.name === `${side}_hip`);
+    if (!shoulder?.observed || !hip?.observed) return null;
+    return { source: side, top: shoulder, bottom: hip };
+}
+
 function emptyJoints() {
     return BODY_JOINTS.map(name => ({
         name, x: null, y: null, normalizedX: null, normalizedY: null,
@@ -87,17 +94,22 @@ export function createMotionAnalyzer({ now = () => Date.now() } = {}) {
             joints.find(point => point.name === "left_hip"),
             joints.find(point => point.name === "right_hip")
         ], videoWidth, videoHeight);
-        const bodyCenter = shoulders && hips ? {
-            x: (shoulders.x + hips.x) / 2,
-            y: (shoulders.y + hips.y) / 2,
-            normalizedX: validDimension(videoWidth) ? (shoulders.x + hips.x) / (2 * videoWidth) : null,
-            normalizedY: validDimension(videoHeight) ? (shoulders.y + hips.y) / (2 * videoHeight) : null
+        // Corpo de perfil ou parcialmente oculto: quando falta um dos lados, usa o
+        // ombro e o quadril do MESMO lado. Lados cruzados nunca são combinados.
+        const torsoSide = shoulders && hips ? { source: "bilateral", top: shoulders, bottom: hips }
+            : sideTorso(joints, "left") ?? sideTorso(joints, "right");
+        const bodyCenter = torsoSide ? {
+            x: (torsoSide.top.x + torsoSide.bottom.x) / 2,
+            y: (torsoSide.top.y + torsoSide.bottom.y) / 2,
+            normalizedX: validDimension(videoWidth) ? (torsoSide.top.x + torsoSide.bottom.x) / (2 * videoWidth) : null,
+            normalizedY: validDimension(videoHeight) ? (torsoSide.top.y + torsoSide.bottom.y) / (2 * videoHeight) : null,
+            source: torsoSide.source
         } : null;
 
         // In image coordinates Y increases downwards. atan2(dx, dy) therefore
         // gives 0° for a vertical torso and a signed lean relative to image vertical.
-        const trunkAngleDegrees = shoulders && hips
-            ? Math.atan2(hips.x - shoulders.x, hips.y - shoulders.y) * 180 / Math.PI
+        const trunkAngleDegrees = torsoSide
+            ? Math.atan2(torsoSide.bottom.x - torsoSide.top.x, torsoSide.bottom.y - torsoSide.top.y) * 180 / Math.PI
             : null;
 
         let boundingBox = null;
@@ -124,7 +136,10 @@ export function createMotionAnalyzer({ now = () => Date.now() } = {}) {
 
         const intervalMs = previousSampleTimestamp !== null ? sampledAt - previousSampleTimestamp : null;
         const intervalValid = Number.isFinite(intervalMs) && intervalMs > 0;
-        const canCompare = personDetected && bodyCenter && previousMovementReference && intervalValid;
+        // Trocar a origem do centro (ambos os lados ↔ um lado) desloca o ponto
+        // sem movimento real; nesse quadro o deslocamento não é calculado.
+        const canCompare = personDetected && bodyCenter && previousMovementReference && intervalValid &&
+            previousMovementReference.source === bodyCenter.source;
         const deltaX = canCompare && bodyCenter.normalizedX !== null &&
             previousMovementReference.normalizedX !== null
             ? bodyCenter.normalizedX - previousMovementReference.normalizedX : null;

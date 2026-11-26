@@ -173,9 +173,75 @@ export function installUI(app) {
     visibilityState.textContent = `${result.visibility.state}${visibilityDetails}`;
     visibilityState.dataset.state = result.visibility.state === "BOA VISIBILIDADE" ? "success" :
         result.visibility.state === "VISIBILIDADE PARCIAL" ? "attention" : "waiting";
+    // Com o módulo de gravidade instalado, o cartão é atualizado por renderFallSeverity.
+    if (app.latestFallSeverity) return;
     fallRiskState.textContent = result.fallRisk.state;
     fallRiskState.dataset.state = "waiting";
 
+    };
+
+    const severityStates = { 0: "waiting", 1: "processing", 2: "attention", 3: "error" };
+    const outcomeLabels = {
+        RECUPERADA_LOGO_APÓS_IMPACTO: "recuperação logo após o impacto",
+        RECUPERADA: "recuperação",
+        PESSOA_INFORMOU_ESTAR_BEM: "pessoa informou estar bem"
+    };
+    let lastRenderedLevel = 0;
+    let lastBeepLevel = 0;
+
+    function beep() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            const context = new AudioContextClass();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.08;
+            oscillator.connect(gain).connect(context.destination);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.4);
+            oscillator.onended = () => context.close();
+        } catch (error) {
+            // Sem áudio disponível: o alerta visual continua ativo.
+        }
+    }
+
+    app.renderFallSeverity = function(result) {
+        const state = document.getElementById("fallRiskState");
+        const alert = document.getElementById("fallAlert");
+        if (!state || !result) return;
+
+        const seconds = Number.isFinite(result.elapsedSinceImpactMs) ? Math.round(result.elapsedSinceImpactMs / 1000) : null;
+        let text = result.label;
+        if (result.phase === "EM_ACOMPANHAMENTO" && seconds !== null) text += ` · ${seconds}s após o impacto`;
+        if (result.evidence === "insuficiente") text += " · evidência visual insuficiente";
+        if (result.phase === "ENCERRADO" && result.outcome) text += ` · encerrado: ${outcomeLabels[result.outcome] ?? result.outcome}`;
+        state.textContent = text;
+        state.dataset.state = severityStates[result.level] ?? "waiting";
+
+        if (result.phase === "EM_ACOMPANHAMENTO" && result.level !== lastRenderedLevel && result.level >= 2) {
+            app.registerEvent(`${result.label} (${seconds ?? "?"}s após o impacto). Verificar a pessoa.`);
+        }
+        lastRenderedLevel = result.phase === "EM_ACOMPANHAMENTO" ? result.level : 0;
+
+        if (!alert) return;
+        const showAlert = result.alarm === "aviso" || result.alarm === "alerta";
+        alert.hidden = !showAlert;
+        alert.dataset.level = String(result.level);
+        if (showAlert) {
+            document.getElementById("fallAlertTitle").textContent = result.label;
+            document.getElementById("fallAlertText").textContent = result.level >= 3
+                ? "A pessoa parece estar em posição baixa há muito tempo ou imóvel. Verifique imediatamente."
+                : "Posição baixa mantida após a carência. Se estiver tudo bem, toque em \"Estou bem\".";
+        }
+        if (result.level >= 3 && lastBeepLevel < 3) beep();
+        lastBeepLevel = result.phase === "EM_ACOMPANHAMENTO" ? result.level : 0;
+    };
+
+    app.recordFallSeverityEvent = function(summary) {
+        const outcome = outcomeLabels[summary.outcome] ?? summary.outcome;
+        app.registerEvent(`Possível queda encerrada · nível máximo ${summary.maxLevel} · ${outcome}.`);
     };
     app.resetAnalysisDimensions = function() {
     const visibilityState = document.getElementById("visibilityState");

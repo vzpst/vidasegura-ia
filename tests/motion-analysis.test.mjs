@@ -219,3 +219,32 @@ test("a caixa parcial declara explicitamente que não representa o corpo inteiro
     assert.equal(sample.boundingBox.isPartial, true);
     assert.equal(sample.boundingBox.representsWholeBody, false);
 });
+
+test("perfil: ombro e quadril do mesmo lado geram centro corporal e ângulo do tronco", () => {
+    const analyzer = createMotionAnalyzer();
+    const sample = record(analyzer, {
+        timestamp: 1000,
+        pose: makePose({ omit: ["right_shoulder", "right_hip", "right_elbow", "right_wrist", "right_knee", "right_ankle"] })
+    });
+    assert.equal(sample.centers.shoulders, null);
+    assert.equal(sample.centers.hips, null);
+    assert.equal(sample.centers.body.source, "left");
+    assert.equal(sample.centers.body.normalizedY, (0.25 + 0.5) / 2);
+    assert.ok(Number.isFinite(sample.trunkAngleDegrees));
+});
+
+test("troca da origem do centro (bilateral para um lado) não gera deslocamento artificial", () => {
+    const analyzer = createMotionAnalyzer();
+    record(analyzer, { timestamp: 1000 });
+    const profile = record(analyzer, {
+        timestamp: 1100,
+        pose: makePose({ omit: ["right_shoulder", "right_hip"] })
+    });
+    assert.equal(profile.centers.body.source, "left");
+    assert.equal(profile.displacement.deltaYNormalized, null);
+    const next = record(analyzer, {
+        timestamp: 1200,
+        pose: makePose({ dy: 50, omit: ["right_shoulder", "right_hip"] })
+    });
+    assert.ok(next.displacement.deltaYNormalized > 0);
+});
