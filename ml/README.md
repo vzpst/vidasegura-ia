@@ -216,5 +216,5 @@ continuam recusados pelo pipeline da coleta.
 
 O número que importa é o **teste externo**: o modelo treinado só com dados públicos é
 avaliado nas amostras da câmera que nunca viu. Com um único participante, ele é apenas
-indicativo. `models/` fica fora do Git; sem o arquivo, o app usa só a regra geométrica.
+indicativo. `models/posture-forest.json` é versionado (treinado com os dados públicos e as amostras da câmera do autor); sem o arquivo, o app usa só a regra geométrica.
 No navegador (`js/posture-model.js`) o modelo só decide quando a probabilidade é ≥ 0,6.
