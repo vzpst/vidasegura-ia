@@ -109,26 +109,35 @@ export function installFallDemo(app) {
         }
     }
 
-    // Mesmo fluxo de pose.js para um quadro com (ou sem) pessoa.
-    function processFrame(pose) {
+    // Mesmo fluxo de pose.js para um quadro com (ou sem) pessoa. Também usado pela
+    // simulação da rotina (routine-sim.js).
+    app.processSyntheticFrame = function(pose, frame = FRAME) {
         const timestamp = Date.now();
+        app.demoFrameSize = frame;
         const analysisResult = app.createAnalysisResult(pose, timestamp);
         app.recordAnalysisResult(analysisResult);
         const motionSample = app.recordMotionInference({
-            pose, analysisResult, videoWidth: FRAME.width, videoHeight: FRAME.height
+            pose, analysisResult, videoWidth: frame.width, videoHeight: frame.height
         });
-        app.evaluateFallSeverity(app.evaluateFallDetection(motionSample), motionSample);
-        drawDemoPose(pose);
+        const fall = app.evaluateFallDetection(motionSample);
+        const severity = app.evaluateFallSeverity(fall, motionSample);
+        const activity = app.updateActivity?.(analysisResult, pose, frame.width, frame.height) ?? null;
         if (!pose) {
             app.updatePostureHistory(null);
             app.setPoseStatus("Procurando uma pessoa...");
-            return;
+            return { analysisResult, motionSample, fall, severity, activity };
         }
         const posture = analysisResult.posture.state === "INCONCLUSIVA" ? null : analysisResult.posture.state;
         const stablePosture = app.updatePostureHistory(posture);
         if (stablePosture) app.recordPositionChange(stablePosture, timestamp);
         if (!posture) app.setPoseStatus("Não foi possível identificar a posição.");
         else app.setPoseStatus(stablePosture ? `Posição identificada: ${stablePosture}` : "Pessoa detectada — analisando posição...");
+        return { analysisResult, motionSample, fall, severity, activity };
+    };
+
+    function processFrame(pose) {
+        app.processSyntheticFrame(pose, FRAME);
+        drawDemoPose(pose);
     }
 
     function tick() {
@@ -141,6 +150,7 @@ export function installFallDemo(app) {
     }
 
     function start() {
+        app.stopRoutineSimulation?.();
         if (app.cameraStream) {
             app.registerEvent?.("Desligue a câmera para usar a demonstração de queda.");
             return;
@@ -177,6 +187,7 @@ export function installFallDemo(app) {
     }
 
     button.addEventListener("click", () => (timer ? stop() : start()));
+    app.stopFallDemo = () => { if (timer) stop(); };
     // Ligar a câmera encerra uma demonstração em andamento.
     document.getElementById("startCamera")?.addEventListener("click", () => { if (timer) stop(); }, { capture: true });
 }

@@ -54,3 +54,6 @@ htmlcov/
 # Modelos exportados: só o modelo de postura do navegador é versionado (pedido do autor)
 models/*
 !models/posture-forest.json
+
+# Documentos gerados localmente (não versionar)
+docs/*.pdf

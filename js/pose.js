@@ -164,6 +164,7 @@ export function installPose(app) {
                     videoHeight: app.camera.videoHeight
                 });
                 app.evaluateFallSeverity(app.evaluateFallDetection(motionSample), motionSample);
+                app.updateActivity?.(analysisResult, poses[0], app.camera.videoWidth, app.camera.videoHeight);
                 const posture = analysisResult.posture.state === "INCONCLUSIVA" ? null : analysisResult.posture.state;
                 const stablePosture = app.updatePostureHistory(posture);
                 if (stablePosture) app.recordPositionChange(stablePosture, analysisResult.timestamp);
@@ -182,6 +183,7 @@ export function installPose(app) {
                     videoHeight: app.camera.videoHeight
                 });
                 app.evaluateFallSeverity(app.evaluateFallDetection(motionSample), motionSample);
+                app.updateActivity?.(analysisResult, null, app.camera.videoWidth, app.camera.videoHeight);
                 app.drawPose(null);
                 app.updatePostureHistory(null);
                 // Pequenas falhas não apagam a mensagem; só declara ausência após 1,5 s.
