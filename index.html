@@ -162,7 +162,7 @@
                                 <div><strong id="fallAlertTitle">Possível queda</strong><p id="fallAlertText">Verifique a pessoa.</p></div>
                                 <button id="fallAcknowledge" class="button button-primary" type="button">Estou bem</button>
                             </div>
-                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios. <span id="appVersion" class="app-version">versão 2026-11-26.4</span></p>
+                            <p class="analysis-note"><svg><use href="#icon-shield"/></svg> Protótipo experimental, não é dispositivo médico. Nenhuma queda é confirmada; os níveis usam tempos provisórios. <span id="appVersion" class="app-version">versão 2026-11-26.5</span></p>
                         </aside>
                     </div>
                 </section>
@@ -190,7 +190,7 @@
                                 <canvas id="routineCanvas" aria-label="Cena ilustrada da simulação da rotina"></canvas>
                                 <span id="routineCameraName" class="sim-chip">CÂMERA · COZINHA</span>
                                 <span class="sim-chip sim-chip-right">SIMULAÇÃO · sem câmera</span>
-                                <p id="routineCaption" class="sim-caption">Clique em “Simular um dia” para ver a rotina e a análise acontecendo ao vivo.</p>
+                                <p id="routineCaption" class="sim-caption">Clique em “Simular um dia” ou escolha uma etapa abaixo para ir direto a ela.</p>
                                 <div id="routineToast" class="sim-toast" data-state="success" hidden><strong></strong><span></span></div>
                             </div>
                             <div class="sim-progress">
@@ -216,7 +216,7 @@
                                 <p id="routineCurrentEvidence" class="routine-evidence"></p>
                             </article>
                             <article class="surface-card sim-readouts">
-                                <p class="eyebrow">ANÁLISE AO VIVO DA SIMULAÇÃO</p>
+                                <p class="eyebrow">ANÁLISE AO VIVO · <span id="readoutSource">aguardando</span></p>
                                 <dl>
                                     <div><dt>Postura</dt><dd id="simPosture" data-state="waiting">—</dd></div>
                                     <div><dt>Atividade</dt><dd id="simActivity" data-state="waiting">—</dd></div>
@@ -256,6 +256,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
-    <script type="module" src="js/main.js?v=2026-11-26.4"></script>
+    <script type="module" src="js/main.js?v=2026-11-26.5"></script>
 </body>
 </html>

@@ -675,6 +675,31 @@ export function drawScene(ctx, { segment, clock, body, prop, time, activityId, s
 }
 
 // ---------------------------------------------------------------- controle
+/** Maior velocidade de descida do centro do corpo nos últimos 0,7 s (fração da altura por segundo). */
+export function createDescentMeter({ windowMs = 700, minimumScore = 0.3 } = {}) {
+    let centers = [];
+    let peak = 0;
+    return {
+        measure(keypoints, width, height, now) {
+            const pick = names => keypoints.filter(item => names.includes(item.name) && (item.score ?? 0) >= minimumScore && Number.isFinite(item.y));
+            const points = [...pick(["left_shoulder", "right_shoulder"]), ...pick(["left_hip", "right_hip"])];
+            if (points.length < 2 || !height) return 0;
+            const y = points.reduce((sum, item) => sum + item.y, 0) / points.length / height;
+            centers.push({ t: now, y });
+            centers = centers.filter(item => now - item.t <= windowMs);
+            let speed = 0;
+            for (const item of centers) {
+                const seconds = (now - item.t) / 1000;
+                if (seconds > 0.15) speed = Math.max(speed, (y - item.y) / seconds);
+            }
+            peak = Math.max(peak, speed);
+            return Math.max(0, speed);
+        },
+        peak: () => peak,
+        reset() { centers = []; peak = 0; }
+    };
+}
+
 export function installRoutineSimulation(app) {
     const canvas = document.getElementById("routineCanvas");
     if (!canvas) return;
@@ -689,9 +714,10 @@ export function installRoutineSimulation(app) {
     let lastTick = null;
     let frame = null;
     let currentIndex = -1;
-    let centers = [];
     let peakDescent = 0;
     let sleepNoted = false;
+    const simMeter = createDescentMeter();
+    const cameraMeter = createDescentMeter();
     const day = new Date();
 
     function resizeCanvas() {
@@ -703,25 +729,46 @@ export function installRoutineSimulation(app) {
         ctx.setTransform(width / FRAME.width, 0, 0, height / FRAME.height, 0, 0);
     }
 
-    function descentSpeed(keypoints, now) {
-        const get = name => keypoints.find(item => item.name === name);
-        const y = (get("left_shoulder").y + get("left_hip").y) / 2 / FRAME.height;
-        centers.push({ t: now, y });
-        centers = centers.filter(item => now - item.t <= 700);
-        let speed = 0;
-        for (const item of centers) {
-            const seconds = (now - item.t) / 1000;
-            if (seconds > 0.15) speed = Math.max(speed, (y - item.y) / seconds);
-        }
-        return Math.max(0, speed);
-    }
-
     function setReadout(id, text, state) {
         const node = el(id);
         if (!node) return;
         node.textContent = text;
         if (state) node.dataset.state = state;
     }
+
+    const decimal = value => value.toFixed(2).replace(".", ",");
+
+    // Painel "Análise ao vivo": usado pela simulação e pela câmera real.
+    function renderReadouts({ source, postureState, activityLabel, severity, speed, peak, peakLabel }) {
+        setReadout("readoutSource", source);
+        setReadout("simPosture", !postureState ? "—" : postureState === "INCONCLUSIVA" ? "Analisando…" : postureState,
+            !postureState ? "waiting" : postureState === "INCONCLUSIVA" ? "processing" : "success");
+        setReadout("simActivity", activityLabel ?? "—", activityLabel ? "success" : "waiting");
+        const fallText = severity?.phase === "EM_ACOMPANHAMENTO" ? severity.label
+            : severity?.phase === "OBSERVANDO_DESCIDA" ? "Descida rápida · analisando" : "Sem queda";
+        setReadout("simFall", fallText, severity?.level >= 2 ? "error" : severity?.level === 1 ? "attention" : "success");
+        const ratio = Math.min(1, speed / (DESCENT_LIMIT / 0.75));
+        el("simDescentFill").style.width = `${ratio * 100}%`;
+        el("simDescentFill").dataset.level = speed >= DESCENT_LIMIT ? "high" : speed >= DESCENT_LIMIT * 0.6 ? "mid" : "low";
+        el("simDescentValue").textContent = `${decimal(speed)} /s`;
+        el("simDescentPeak").textContent = `${peakLabel}: ${decimal(peak)} /s · limite de queda ${decimal(DESCENT_LIMIT)} /s`;
+    }
+
+    // Câmera real: o mesmo painel acompanha a pessoa ao vivo (quando a simulação não está rodando).
+    app.updateRoutineReadouts = function(analysisResult, pose, width, height) {
+        if (running) return;
+        const speed = pose ? cameraMeter.measure(pose.keypoints, width, height, analysisResult?.timestamp ?? Date.now()) : 0;
+        renderReadouts({
+            source: "câmera",
+            postureState: analysisResult?.personDetection?.detected ? analysisResult.posture.state : null,
+            activityLabel: app.latestActivity?.label ?? null,
+            severity: app.latestFallSeverity,
+            speed,
+            peak: cameraMeter.peak(),
+            peakLabel: "pico desde que a câmera ligou"
+        });
+    };
+    app.resetRoutineReadouts = () => cameraMeter.reset();
 
     function updateProgress(index) {
         el("routineProgressFill").style.width = `${Math.min(100, elapsed / TOTAL_MS * 100)}%`;
@@ -736,8 +783,7 @@ export function installRoutineSimulation(app) {
         app.resetFallDetection?.();
         app.resetActivity?.();
         app.postureHistory = [];
-        centers = [];
-        peakDescent = 0;
+        simMeter.reset();
         currentIndex = index;
         const segment = SEGMENTS[index];
         el("routineCameraName").textContent = `CÂMERA · ${segment.camera.toUpperCase()}`;
@@ -763,9 +809,8 @@ export function installRoutineSimulation(app) {
         const body = buildBody(params);
         const pose = { score: 0.8, keypoints: body.keypoints };
         const result = app.processSyntheticFrame(pose, FRAME);
-        const timestamp = Date.now();
-        const speed = descentSpeed(body.keypoints, timestamp);
-        peakDescent = Math.max(peakDescent, speed);
+        const speed = simMeter.measure(body.keypoints, FRAME.width, FRAME.height, Date.now());
+        peakDescent = simMeter.peak();
 
         const fadeIn = Math.max(0, 1 - local / 500);
         const fadeOut = Math.max(0, 1 - (segment.ms - local) / 500);
@@ -774,18 +819,9 @@ export function installRoutineSimulation(app) {
             showSkeleton: skeletonToggle?.checked, transition: Math.max(fadeIn, fadeOut) * 0.85 });
 
         el("routineClockText").textContent = clock.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        const posture = result.analysisResult.posture.state;
-        setReadout("simPosture", posture === "INCONCLUSIVA" ? "Analisando…" : posture, posture === "INCONCLUSIVA" ? "processing" : "success");
-        setReadout("simActivity", result.activity?.label ?? "—", "success");
         const severity = result.severity;
-        const fallText = severity?.phase === "EM_ACOMPANHAMENTO" ? severity.label
-            : severity?.phase === "OBSERVANDO_DESCIDA" ? "Descida rápida · analisando" : "Sem queda";
-        setReadout("simFall", fallText, severity?.level >= 2 ? "error" : severity?.level === 1 ? "attention" : "success");
-        const ratio = Math.min(1, speed / (DESCENT_LIMIT / 0.75));
-        el("simDescentFill").style.width = `${ratio * 100}%`;
-        el("simDescentFill").dataset.level = speed >= DESCENT_LIMIT ? "high" : speed >= DESCENT_LIMIT * 0.6 ? "mid" : "low";
-        el("simDescentValue").textContent = `${speed.toFixed(2).replace(".", ",")} /s`;
-        el("simDescentPeak").textContent = `pico nesta cena: ${peakDescent.toFixed(2).replace(".", ",")} /s · limite ${DESCENT_LIMIT.toFixed(2).replace(".", ",")} /s`;
+        renderReadouts({ source: "simulação", postureState: result.analysisResult.posture.state,
+            activityLabel: result.activity?.label, severity, speed, peak: peakDescent, peakLabel: "pico nesta cena" });
 
         if (segment.id === "dormir" && result.activity?.id === "dormindo" && !sleepNoted) {
             sleepNoted = true;
@@ -863,6 +899,30 @@ export function installRoutineSimulation(app) {
         playButton.innerHTML = '<span aria-hidden="true">▶</span> Simular um dia';
     };
 
+    // Pular direto para uma etapa (útil em apresentações).
+    function jumpTo(index) {
+        if (app.cameraStream) {
+            el("routineCaption").textContent = "Desligue a câmera para usar a simulação.";
+            return;
+        }
+        el("routineToast").hidden = true;
+        elapsed = SEGMENTS.slice(0, index).reduce((sum, segment) => sum + segment.ms, 0);
+        currentIndex = -1;
+        lastTick = null;
+        if (!running) start();
+    }
+    document.querySelectorAll(".sim-step").forEach((stepElement, index) => {
+        const name = stepElement.querySelector("span")?.firstChild?.textContent?.trim() ?? SEGMENTS[index].id;
+        stepElement.tabIndex = 0;
+        stepElement.setAttribute("role", "button");
+        stepElement.setAttribute("aria-label", `Ir para: ${name}`);
+        stepElement.title = `Ir direto para: ${name}`;
+        stepElement.addEventListener("click", () => jumpTo(index));
+        stepElement.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); jumpTo(index); }
+        });
+    });
+
     playButton.addEventListener("click", () => (running ? pause() : start()));
     restartButton?.addEventListener("click", () => {
         if (running) pause();
@@ -870,7 +930,10 @@ export function installRoutineSimulation(app) {
         currentIndex = -1;
         start();
     });
-    document.getElementById("startCamera")?.addEventListener("click", () => app.stopRoutineSimulation(), { capture: true });
+    document.getElementById("startCamera")?.addEventListener("click", () => {
+        app.stopRoutineSimulation();
+        cameraMeter.reset();
+    }, { capture: true });
 
     // Quadro inicial ilustrativo.
     function drawPreview() {

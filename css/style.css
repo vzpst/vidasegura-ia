@@ -483,3 +483,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
     .sim-caption { font-size: 10.5px; padding: 7px 9px; }
     .routine-summary { justify-content: flex-start; }
 }
+
+.sim-step { cursor: pointer; }
+.sim-step:hover { border-color: var(--button-hover-border); background: var(--button-hover-bg); color: var(--nav-active); }
+.sim-step:focus-visible { outline: 2px solid var(--nav-active); outline-offset: 2px; }
+#readoutSource { color: var(--nav-active); }
